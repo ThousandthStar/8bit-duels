@@ -121,8 +121,5 @@ fn waiting_ui(
 fn in_game_ui(mut context: ResMut<EguiContext>, selected_card: Res<SelectedCardEntity>) {
     egui::Window::new("Playing").show(context.ctx_mut(), |ui| {
         ui.monospace("Playing the game!");
-        if ui.button("Test").clicked() {
-            println!("{:?}", selected_card.0);
-        }
     });
 }

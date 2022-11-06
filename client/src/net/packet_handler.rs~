@@ -2,7 +2,7 @@ use super::{QueueIn, QueueOut};
 use crate::{
     game::card::{CardEntity, CardSprites},
     tilemap::TileSize,
-    GameState,
+    GameState, IsPlayer1, IsSelfTurn,
 };
 use bevy::prelude::*;
 use serde_json::Value;
@@ -25,6 +25,7 @@ fn handle_packets(
     mut state: ResMut<State<GameState>>,
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
+    mut card_entity_q: Query<(&mut CardEntity)>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if !guard.is_empty() {
@@ -40,13 +41,14 @@ fn handle_packets(
                         if matches!(packet["player-1"].clone(), Value::Bool(_bool)) {
                             let player_1: Value =
                                 serde_json::from_value(packet["player-1"].clone()).unwrap();
-                            commands.insert_resource(crate::IsPlayer1(
-                                if player_1.as_bool().unwrap() {
-                                    true
-                                } else {
-                                    false
-                                },
-                            ));
+
+                            if player_1.as_bool().unwrap() {
+                                commands.insert_resource(IsPlayer1(true));
+                                commands.insert_resource(IsSelfTurn(true));
+                            } else {
+                                commands.insert_resource(IsPlayer1(false));
+                                commands.insert_resource(IsSelfTurn(false));
+                            }
                         }
                         state.set(GameState::Playing);
                     }
@@ -76,9 +78,22 @@ fn handle_packets(
                             }
                         }
                     }
-                    "none" => {
-                        println!("bad packet from the server!")
+                    "move-troop" => {
+                        let start_x = packet["start-x"].clone().as_f64().unwrap_or(f64::MAX);
+                        let start_y = packet["start-y"].clone().as_f64().unwrap_or(f64::MAX);
+                        let end_x = packet["end-x"].clone().as_f64().unwrap_or(f64::MAX);
+                        let end_y = packet["end-y"].clone().as_f64().unwrap_or(f64::MAX);
+
+                        for mut card_entity in card_entity_q.iter_mut() {
+                            if card_entity.get_x_pos() as f64 == start_x
+                                && card_entity.get_y_pos() as f64 == start_y
+                            {
+                                card_entity.set_x_pos(end_x);
+                                card_entity.set_y_pos(end_y);
+                            }
+                        }
                     }
+
                     &_ => {}
                 }
             }

@@ -44,7 +44,7 @@ fn spawn_tilemap_bg(
                     color: if (i + (j * 5)) % 2 == 0 {
                         Color::hex("ffa19e").unwrap()
                     } else {
-                        Color::hex("f6e1b1").unwrap()
+                        Color::hex("9eb5c0").unwrap()
                     },
                     ..Default::default()
                 },

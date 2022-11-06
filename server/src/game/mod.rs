@@ -7,8 +7,11 @@ use serde_json::Value;
 
 use crate::net::client::Client;
 use crate::net::packets::{Packet, PacketType, WritePacket};
+use crate::utils;
 
 use self::card::{Card, CardEntity};
+
+use log::{info, warn};
 
 pub mod card;
 pub mod player_deck;
@@ -43,10 +46,10 @@ impl Game {
         let queue_2 = self.client_2.get_packet_queue();
         let out_1 = self.client_1.get_stream();
         let out_2 = self.client_2.get_stream();
-        let game_board = Arc::new(Mutex::new(&self.game_board));
         let cards = card::CardCollection::init();
+        let game_board = self.game_board.clone();
         thread::spawn(
-            closure::closure!(move queue_1, move queue_2, move cards, ||{
+            closure::closure!(move queue_1, move queue_2, move cards, move mut game_board, ||{
                 let mut deck_1: Option<Vec<Card>> = None;
                 let mut deck_2: Option<Vec<Card>> = None;
                 let mut player_1: bool = true;
@@ -83,16 +86,65 @@ impl Game {
                     drop(guard);
                 }
                 let mut guard = out_1.lock().unwrap();
-                guard.write_packet(Packet::new(PacketType::ServerStartGame, true));
-                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, false));
+                guard.write_packet(Packet::start_game(PacketType::ServerStartGame, true));
+                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, true, false));
                 drop(guard);
                 guard = out_2.lock().unwrap();
-                guard.write_packet(Packet::new(PacketType::ServerStartGame, false));
-                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, true));
+                guard.write_packet(Packet::start_game(PacketType::ServerStartGame, false));
+                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, true, true));
                 drop(guard);
-                println!("Game Started");
-                loop{
+                game_board[3][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, true));
+                let mut is_player_1_turn = true;
 
+                info!("starting game");
+                loop{
+                    let mut packet = Value::Null;
+                    if is_player_1_turn{
+                        let mut guard = queue_1.lock().unwrap();
+                        if guard.is_empty(){
+                            drop(guard);
+                            continue;
+                        }
+                        packet = serde_json::from_str(guard.pop_front().unwrap().as_str()).unwrap_or(Value::Null);
+                        drop(guard);
+                    }
+                        if matches!(packet, Value::Object(_)){
+                            if let Value::String(packet_type) = packet["packet-type"].clone(){
+                                match packet_type.as_str(){
+                                    "move-troop" => {
+                                        let positions = utils::get_targeted_action_positions(packet);
+
+                                        if positions.is_none(){
+                                            continue;
+                                        }
+
+                                        let (start_x, start_y, end_x, end_y) = positions.unwrap();
+
+                                        let card_to_move = game_board[start_y as usize][start_x as usize].clone();
+                                        let where_to_move = game_board[end_y as usize][end_x as usize].clone();
+
+                                        if card_to_move.is_some() && where_to_move.is_none(){
+                                            game_board[start_y as usize][start_x as usize] = None;
+                                            game_board[end_y as usize][end_x as usize] = Some(card_to_move.unwrap());
+                                            guard = out_1.lock().unwrap();
+                                            let mut guard_2 = out_2.lock().unwrap();
+                                            if is_player_1_turn{
+                                                guard.write_packet(Packet::move_troop(start_x, start_y, end_x, end_y));
+                                                guard_2.write_packet(Packet::move_troop(4. - start_x, 8. - start_y, 4. - end_x, 8. - end_y));
+                                            }
+                                            else{
+                                                guard.write_packet(Packet::move_troop(4. - start_x, 8. - start_y, 4. - end_x, 8. - end_y));
+                                                guard.write_packet(Packet::move_troop(start_x, start_y, end_x, end_y));
+                                            }
+                                            drop(guard);
+                                            drop(guard_2);
+                                        }
+                                    },
+                                    _ => continue,
+                                }
+                            }
+
+                    }
                 }
             }),
         );

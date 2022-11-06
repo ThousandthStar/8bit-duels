@@ -138,6 +138,22 @@ impl CardEntity {
     pub(crate) fn get_y_pos(&self) -> i32 {
         self.position_y.clone()
     }
+
+    pub(crate) fn set_x_pos(&mut self, x: f64) {
+        self.position_x = x as i32;
+    }
+
+    pub(crate) fn set_y_pos(&mut self, y: f64) {
+        self.position_y = y as i32;
+    }
+
+    pub(crate) fn is_owned_by_p1(&self) -> bool {
+        if self.is_owned_by_p1 {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

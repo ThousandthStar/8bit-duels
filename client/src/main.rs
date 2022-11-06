@@ -28,6 +28,9 @@ pub(crate) enum GameState {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct IsPlayer1(pub(crate) bool);
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct IsSelfTurn(pub(crate) bool);
+
 #[warn(unused_must_use)]
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -79,4 +82,14 @@ fn spawn_camera(mut commands: Commands) {
     camera.projection.scaling_mode = ScalingMode::WindowSize;
 
     commands.spawn_bundle(camera).insert(MainCamera);
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn or_test() {
+        assert!(true || false);
+        assert!(true || true);
+    }
 }

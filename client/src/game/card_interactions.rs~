@@ -1,4 +1,8 @@
-use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1};
+use crate::{
+    net::{packets, QueueOut},
+    tilemap::TileSize,
+    GameState, IsPlayer1, IsSelfTurn,
+};
 use bevy::prelude::*;
 
 use super::card::CardEntity;
@@ -13,6 +17,9 @@ impl Plugin for CardInteractions {
             )
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(setting_indicators_system),
+            )
+            .add_system_set(
+                SystemSet::on_update(GameState::Playing).with_system(card_interactions_system),
             );
     }
 }
@@ -30,30 +37,15 @@ fn card_selecting_system(
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
     cam_q: Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+    is_player_1: Res<IsPlayer1>,
     mut card_entity_q: Query<(&Transform, &mut CardEntity), Without<Camera>>,
     mut selected_card_entity: ResMut<SelectedCardEntity>,
 ) {
-    let window = windows.primary();
-    if let Some(screen_pos) = window.cursor_position() {
-        let (camera, camera_transform) = cam_q.single();
-        let world_pos = screen_to_world_position(screen_pos, camera, camera_transform, window);
-
-        if mouse.just_pressed(MouseButton::Left) {
-            for (transform, mut card_entity) in card_entity_q.iter_mut() {
-                if is_in_boundary(
-                    Vec2::new(
-                        transform.translation.x - tile_size.0 / 2.,
-                        transform.translation.y + tile_size.0 / 2.,
-                    ),
-                    Vec2::new(
-                        transform.translation.x + tile_size.0 / 2.,
-                        transform.translation.y - tile_size.0 / 2.,
-                    ),
-                    world_pos,
-                ) {
-                    selected_card_entity.0 = Some(card_entity.clone());
-                }
-            }
+    for (transform, mut card_entity) in card_entity_q.iter_mut() {
+        if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q)
+            && is_player_1.0 == card_entity.is_owned_by_p1()
+        {
+            selected_card_entity.0 = Some(card_entity.clone());
         }
     }
 }
@@ -127,6 +119,90 @@ fn setting_indicators_system(
             visibility.is_visible = false;
         }
     }
+}
+
+fn card_interactions_system(
+    mut queue_out: ResMut<QueueOut>,
+    mut selected_card_entity: ResMut<SelectedCardEntity>,
+    move_indicator_q: Query<
+        (&MoveIndicator, &Visibility, &Transform),
+        (Without<AttackIndicator>, Without<CardEntity>),
+    >,
+    attack_indicator_q: Query<
+        (&AttackIndicator, &Visibility, &Transform),
+        (Without<MoveIndicator>, Without<CardEntity>),
+    >,
+    mouse: Res<Input<MouseButton>>,
+    windows: Res<Windows>,
+    tile_size: Res<TileSize>,
+    cam_q: Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+    is_self_turn: Res<IsSelfTurn>,
+) {
+    if selected_card_entity.0.is_none() {
+        return;
+    }
+
+    for (move_indicator, visibility, transform) in move_indicator_q.iter() {
+        if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
+            if visibility.is_visible && is_self_turn.0 {
+                let mut queue_out_guard = queue_out.0.lock().unwrap();
+                println!(
+                    "{}",
+                    serde_json::from_str::<serde_json::Value>(
+                        packets::move_packet(
+                            selected_card_entity.0.clone().unwrap().get_x_pos(),
+                            selected_card_entity.0.clone().unwrap().get_y_pos(),
+                            move_indicator.0,
+                            move_indicator.0,
+                        )
+                        .as_str()
+                    )
+                    .unwrap()
+                );
+                queue_out_guard.push_back(packets::move_packet(
+                    selected_card_entity.0.clone().unwrap().get_x_pos(),
+                    selected_card_entity.0.clone().unwrap().get_y_pos(),
+                    move_indicator.0,
+                    move_indicator.0,
+                ));
+                selected_card_entity.0 = None;
+                return;
+            }
+        }
+    }
+}
+
+pub(crate) fn is_transform_clicked(
+    transform: &Transform,
+    mouse: &Res<Input<MouseButton>>,
+    windows: &Res<Windows>,
+    tile_size: &Res<TileSize>,
+    cam_q: &Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+) -> bool {
+    let window = windows.primary();
+    if let Some(screen_pos) = window.cursor_position() {
+        let (camera, camera_transform) = cam_q.single();
+        let world_pos = screen_to_world_position(screen_pos, camera, camera_transform, window);
+
+        if mouse.just_pressed(MouseButton::Left) {
+            if is_in_boundary(
+                Vec2::new(
+                    transform.translation.x - tile_size.0 / 2.,
+                    transform.translation.y + tile_size.0 / 2.,
+                ),
+                Vec2::new(
+                    transform.translation.x + tile_size.0 / 2.,
+                    transform.translation.y - tile_size.0 / 2.,
+                ),
+                world_pos,
+            ) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+    return false;
 }
 
 pub(crate) fn is_in_boundary(bound_1: Vec2, bound_2: Vec2, position: Vec2) -> bool {

@@ -1,6 +1,7 @@
 mod input;
 mod out;
 pub(crate) mod packet_handler;
+pub(crate) mod packets;
 
 use std::{
     collections::VecDeque,
