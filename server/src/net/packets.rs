@@ -3,6 +3,7 @@ use std::{
     net::TcpStream,
 };
 
+use byteorder::{BigEndian, WriteBytesExt};
 use serde_json::{ser::to_string, Number, Value};
 
 use crate::game::card::{Card, CardEntity};
@@ -61,7 +62,7 @@ impl Packet {
         is_owned_by_p1: bool,
         flip_board: bool,
     ) -> Packet {
-        let mut json: Value = serde_json::from_str(
+        let mut json = serde_json::from_str(
             r#"
             {
                 "packet-type": "spawn-card"        
@@ -122,6 +123,13 @@ pub trait WritePacket {
 
 impl WritePacket for TcpStream {
     fn write_packet(&mut self, packet: Packet) -> io::Result<usize> {
-        self.write(to_string(&packet.data).unwrap().as_bytes())
+        let binding = to_string(&packet.data).unwrap();
+        let bytes = binding.as_bytes();
+        let mut wtr_buf_len = vec![];
+        wtr_buf_len
+            .write_u32::<BigEndian>(bytes.len() as u32)
+            .unwrap();
+        self.write(&wtr_buf_len);
+        self.write(bytes)
     }
 }

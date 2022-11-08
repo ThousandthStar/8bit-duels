@@ -56,7 +56,7 @@ fn spawn_tilemap_bg(
                         transform: Transform::from_xyz(
                             start_x + one_third_window + (i as f32 * tile_size.0),
                             start_y - (j as f32 * tile_size.0),
-                            100.,
+                            200.,
                         ),
                         sprite: Sprite {
                             color: Color::rgba(0.8, 0.8, 0.8, 0.62),

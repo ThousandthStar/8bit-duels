@@ -88,12 +88,13 @@ impl Game {
                 let mut guard = out_1.lock().unwrap();
                 guard.write_packet(Packet::start_game(PacketType::ServerStartGame, true));
                 guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, true, false));
-                drop(guard);
+                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 3, 3, false, false));
                 guard = out_2.lock().unwrap();
                 guard.write_packet(Packet::start_game(PacketType::ServerStartGame, false));
                 guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 4, 3, true, true));
-                drop(guard);
+                guard.write_packet(Packet::spawn_troop(cards.0.get("skeleton").unwrap(), 3, 3, false, true));
                 game_board[3][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, true));
+                game_board[4][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, false));
                 let mut is_player_1_turn = true;
 
                 info!("starting game");

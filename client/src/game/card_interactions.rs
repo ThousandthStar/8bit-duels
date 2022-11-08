@@ -62,6 +62,7 @@ fn setting_indicators_system(
     card_entity_q: Query<&CardEntity, (Without<MoveIndicator>, Without<AttackIndicator>)>,
     selected_card_entity: Res<SelectedCardEntity>,
     is_player_1: Res<IsPlayer1>,
+    is_self_turn: Res<IsSelfTurn>,
 ) {
     if selected_card_entity.0.is_some() {
         let selected_card_entity = selected_card_entity.0.clone().unwrap();
@@ -81,13 +82,14 @@ fn setting_indicators_system(
                         break;
                     }
                 }
-                if available {
+                if available && is_self_turn.0 {
                     visibility.is_visible = true;
                 }
             } else {
                 visibility.is_visible = false;
             }
         }
+
         for (mut attack_indicator, mut visibility) in attack_indicator_q.iter_mut() {
             if Vec2::new(attack_indicator.0 as f32, attack_indicator.1 as f32).distance(Vec2::new(
                 selected_card_entity.get_x_pos() as f32,
@@ -98,14 +100,15 @@ fn setting_indicators_system(
                 for card_entity in card_entity_q.iter() {
                     if card_entity.get_x_pos() == attack_indicator.0
                         && card_entity.get_y_pos() == attack_indicator.1
+                        && card_entity.is_owned_by_p1() != is_player_1.0
                     {
                         available = true;
                         attack_indicator.2 = selected_card_entity.card.get_damage();
                         break;
                     }
                 }
-                if !available {
-                    visibility.is_visible = false;
+                if available && is_self_turn.0 {
+                    visibility.is_visible = true;
                 }
             } else {
                 visibility.is_visible = false;

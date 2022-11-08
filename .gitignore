@@ -1,2 +1,4 @@
 /client/target
 /server/target
+*~
+**/.DS_Store
