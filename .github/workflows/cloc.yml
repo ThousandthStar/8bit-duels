@@ -1,0 +1,2 @@
+- name: Count Lines of Code (cloc)
+  uses: djdefi/cloc-action@5
