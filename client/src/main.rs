@@ -2,20 +2,19 @@ use bevy::render::texture::{ImageSampler, ImageSettings};
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::WorldInspectorPlugin;
-use game::card_interactions::CardInteractions;
 use std::{
     io::{Read, Write},
     net::TcpStream,
 };
 
-pub mod game;
-pub mod net;
-pub mod tilemap;
-pub mod ui;
+pub(crate) mod card_interactions;
+pub(crate) mod net;
+pub(crate) mod tilemap;
+pub(crate) mod ui;
 
-use game::card::{CardCollection, CardPlugin, CardSprites};
+use card_interactions::CardInteractions;
 use net::packet_handler::PacketHandlerPlugin;
-use tilemap::{TileSize, TilemapPlugin};
+use tilemap::{CardSprites, TileSize, TilemapPlugin};
 use ui::UiPlugin;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -51,7 +50,6 @@ fn main() {
         .add_plugin(TilemapPlugin)
         .add_plugin(UiPlugin)
         .add_plugin(PacketHandlerPlugin)
-        .add_plugin(CardPlugin)
         .add_plugin(CardInteractions)
         .add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(spawn_camera)

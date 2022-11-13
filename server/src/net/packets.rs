@@ -115,6 +115,37 @@ impl Packet {
         }
         return Packet { data: json };
     }
+
+    pub fn attack_troop(start_x: f64, start_y: f64, end_x: f64, end_y: f64) -> Packet {
+        let mut json = serde_json::from_str(
+            r#"
+        {
+            "packet-type": "move-troop"
+        }
+    "#,
+        )
+        .unwrap();
+        if let Value::Object(ref mut map) = json {
+            map.insert(
+                "start-x".to_string(),
+                Value::Number(Number::from_f64(start_x as f64).unwrap()),
+            );
+            map.insert(
+                "start-y".to_string(),
+                Value::Number(Number::from_f64(start_y as f64).unwrap()),
+            );
+
+            map.insert(
+                "end-x".to_string(),
+                Value::Number(Number::from_f64(end_x as f64).unwrap()),
+            );
+            map.insert(
+                "end-y".to_string(),
+                Value::Number(Number::from_f64(end_y as f64).unwrap()),
+            );
+        }
+        return Packet { data: json };
+    }
 }
 
 pub trait WritePacket {

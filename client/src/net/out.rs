@@ -8,9 +8,11 @@ use std::{
 };
 
 use byteorder::{BigEndian, WriteBytesExt};
+use common::messages::ClientMessage;
+use serde_json;
 
 pub(crate) fn spawn_output_thread(
-    queue_out_ref: Arc<Mutex<VecDeque<String>>>,
+    queue_out_ref: Arc<Mutex<VecDeque<ClientMessage>>>,
     mut stream: TcpStream,
 ) {
     thread::spawn(move || loop {
@@ -20,10 +22,12 @@ pub(crate) fn spawn_output_thread(
             continue;
         }
         let binding = guard.pop_front().unwrap();
-        let bytes = binding.as_bytes();
-        let mut wtr = vec![];
-        wtr.write_u32::<BigEndian>(bytes.len() as u32).unwrap();
-        stream.write(wtr.as_slice());
-        stream.write(bytes);
+        if let Ok(string) = serde_json::to_string(&binding) {
+            let bytes = string.as_bytes();
+            let mut wtr = vec![];
+            wtr.write_u32::<BigEndian>(bytes.len() as u32).unwrap();
+            stream.write(wtr.as_slice());
+            stream.write(bytes);
+        }
     });
 }

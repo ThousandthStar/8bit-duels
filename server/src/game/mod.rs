@@ -124,9 +124,20 @@ impl Game {
                                         let card_to_move = game_board[start_y as usize][start_x as usize].clone();
                                         let where_to_move = game_board[end_y as usize][end_x as usize].clone();
 
-                                        if card_to_move.is_some() && where_to_move.is_none(){
+                                        if card_to_move.is_none(){
+                                            continue;
+                                        }
+                                        let mut card_to_move = card_to_move.unwrap();
+
+                                        if
+                                            where_to_move.is_none()
+                                            && is_player_1_turn == card_to_move.is_owned_by_p1
+                                            && !card_to_move.has_attacked
+                                            && !card_to_move.has_moved
+                                        {
                                             game_board[start_y as usize][start_x as usize] = None;
-                                            game_board[end_y as usize][end_x as usize] = Some(card_to_move.unwrap());
+                                            card_to_move.has_moved = true;
+                                            game_board[end_y as usize][end_x as usize] = Some(card_to_move);
                                             guard = out_1.lock().unwrap();
                                             let mut guard_2 = out_2.lock().unwrap();
                                             if is_player_1_turn{
@@ -141,8 +152,59 @@ impl Game {
                                             drop(guard_2);
                                         }
                                     },
+                                    "attack-troop" => {
+                                        let positions = utils::get_targeted_action_positions(packet);
+
+                                        if positions.is_none(){
+                                            continue;
+                                        }
+
+                                        let (start_x, start_y, end_x, end_y) = positions.unwrap();
+
+                                        let card_to_attack = game_board[start_y as usize][start_x as usize].clone();
+                                        let where_to_attack = game_board[end_y as usize][end_x as usize].clone();
+
+                                        if card_to_attack.is_none() || where_to_attack.is_none(){
+                                            continue;
+                                        }
+                                        let mut card_to_attack = card_to_attack.unwrap();
+                                        let mut where_to_attack = where_to_attack.unwrap();
+
+                                        if
+                                            is_player_1_turn == card_to_attack.is_owned_by_p1
+                                            && !card_to_attack.has_attacked
+                                            && where_to_attack.is_owned_by_p1 != is_player_1_turn
+                                        {
+                                            card_to_attack.has_attacked = true;
+                                            card_to_attack.has_moved = true;
+                                            where_to_attack.current_hp -= card_to_attack.card.attack;
+                                            let mut killed: bool;
+                                            if where_to_attack.current_hp <= 0 {
+                                                game_board[start_y as usize][start_x as usize] = None;
+                                                game_board[end_y as usize][end_x as usize] = Some(card_to_attack);
+                                                killed = true;
+                                            }
+                                            else{
+                                                game_board[start_y as usize][start_x as usize] = Some(card_to_attack);
+                                                game_board[end_y as usize][end_x as usize] = Some(where_to_attack);
+                                                killed = false;
+                                            }
+                                            guard = out_1.lock().unwrap();
+                                            let mut guard_2 = out_2.lock().unwrap();
+                                            if is_player_1_turn{
+                                                guard.write_packet(Packet::move_troop(start_x, start_y, end_x, end_y));
+                                                guard_2.write_packet(Packet::move_troop(4. - start_x, 8. - start_y, 4. - end_x, 8. - end_y));
+                                            else{
+                                                guard.write_packet(Packet::move_troop(4. - start_x, 8. - start_y, 4. - end_x, 8. - end_y));
+                                                guard.write_packet(Packet::move_troop(start_x, start_y, end_x, end_y));
+                                            }
+                                            drop(guard);
+                                            drop(guard_2);
+                                        }
+                                    },
                                     _ => continue,
                                 }
+                            }
                             }
 
                     }

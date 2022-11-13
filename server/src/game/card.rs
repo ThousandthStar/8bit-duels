@@ -73,7 +73,9 @@ pub(crate) struct CardEntity {
     current_hp: f32,
     position_x: i32,
     position_y: i32,
-    is_owned_by_p1: bool,
+    pub(crate) is_owned_by_p1: bool,
+    pub(crate) has_moved: bool,
+    pub(crate) has_attacked: bool,
 }
 
 impl CardEntity {
@@ -89,6 +91,8 @@ impl CardEntity {
             position_x,
             position_y,
             is_owned_by_p1,
+            has_moved: false,
+            has_attacked: false,
         }
     }
 }

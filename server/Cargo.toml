@@ -12,3 +12,4 @@ closure = "0.3.0"
 log = "0.4"
 simple_logger = "4.0.0"
 byteorder = "1"
+common = { path = "../common/" }

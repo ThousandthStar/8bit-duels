@@ -1,36 +1,6 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::Inspectable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-use crate::tilemap::TileSize;
-
-pub struct CardPlugin;
-
-impl Plugin for CardPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, load_card_sprites)
-            .add_system(position_sprites)
-            .insert_resource(CardCollection::new());
-    }
-}
-
-fn position_sprites(
-    mut query: Query<(&mut Transform, &CardEntity)>,
-    windows: Res<Windows>,
-    tile_size: Res<TileSize>,
-) {
-    let window = windows.get_primary().unwrap();
-    // parentheses only for clarity (they are unnecessary)
-    let start_y = (window.height() / 2.) - (tile_size.0 / 2.);
-    let start_x = (-window.width() / 2.) + (tile_size.0 / 2.) + (window.width() / 3.);
-
-    for (mut transform, card_entity) in query.iter_mut() {
-        transform.translation.x = start_x + (card_entity.get_x_pos() as f32 * tile_size.0);
-        transform.translation.y = start_y - (card_entity.get_y_pos() as f32 * tile_size.0);
-        transform.translation.z = 150.;
-    }
-}
 
 pub struct CardCollection(pub HashMap<String, Card>);
 
@@ -54,26 +24,6 @@ impl CardCollection {
         );
         CardCollection(map)
     }
-}
-
-pub(crate) struct CardSprites(
-    pub(crate) Handle<TextureAtlas>,
-    pub(crate) HashMap<String, usize>,
-);
-
-fn load_card_sprites(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let sprite_sheet = asset_server.load("sprite_sheet.png");
-    let atlas: TextureAtlas = TextureAtlas::from_grid(sprite_sheet, Vec2::splat(8.), 1, 1);
-
-    let atlas_handle = texture_atlases.add(atlas);
-    let mut card_sprite_map = HashMap::new();
-    card_sprite_map.insert("skeleton".to_string(), 0);
-
-    commands.insert_resource(CardSprites(atlas_handle, card_sprite_map));
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -128,6 +78,8 @@ pub struct CardEntity {
     position_x: i32,
     position_y: i32,
     is_owned_by_p1: bool,
+    has_moved: bool,
+    has_attacked: bool,
 }
 
 impl CardEntity {
@@ -153,6 +105,22 @@ impl CardEntity {
         } else {
             false
         }
+    }
+
+    pub(crate) fn has_moved(&self) -> bool {
+        self.has_moved.clone()
+    }
+
+    pub(crate) fn has_attacked(&self) -> bool {
+        self.has_attacked.clone()
+    }
+
+    pub(crate) fn moved(&mut self) {
+        self.has_moved = true;
+    }
+
+    pub(crate) fn attacked(&mut self) {
+        self.has_attacked = true;
     }
 }
 

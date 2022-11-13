@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 
-use super::card::CardEntity;
+use common::card::CardEntity;
 
 pub(crate) struct CardInteractions;
 
@@ -82,7 +82,11 @@ fn setting_indicators_system(
                         break;
                     }
                 }
-                if available && is_self_turn.0 {
+                if available
+                    && is_self_turn.0
+                    && !selected_card_entity.has_moved()
+                    && !selected_card_entity.has_attacked()
+                {
                     visibility.is_visible = true;
                 }
             } else {
@@ -107,7 +111,7 @@ fn setting_indicators_system(
                         break;
                     }
                 }
-                if available && is_self_turn.0 {
+                if available && is_self_turn.0 && !selected_card_entity.has_attacked() {
                     visibility.is_visible = true;
                 }
             } else {
@@ -147,7 +151,7 @@ fn card_interactions_system(
 
     for (move_indicator, visibility, transform) in move_indicator_q.iter() {
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
-            if visibility.is_visible && is_self_turn.0 {
+            if visibility.is_visible {
                 let mut queue_out_guard = queue_out.0.lock().unwrap();
                 queue_out_guard.push_back(packets::move_packet(
                     selected_card_entity.0.clone().unwrap().get_x_pos(),
@@ -157,6 +161,20 @@ fn card_interactions_system(
                 ));
                 selected_card_entity.0 = None;
                 return;
+            }
+        }
+    }
+
+    for (attack_indicator, visibility, transform) in attack_indicator_q.iter() {
+        if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
+            if visibility.is_visible {
+                let mut queue_out_guard = queue_out.0.lock().unwrap();
+                queue_out_guard.push_back(packets::attack_packet(
+                    selected_card_entity.0.clone().unwrap().get_x_pos(),
+                    selected_card_entity.0.clone().unwrap().get_y_pos(),
+                    attack_indicator.0,
+                    attack_indicator.1,
+                ));
             }
         }
     }

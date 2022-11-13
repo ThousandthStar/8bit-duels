@@ -1,5 +1,0 @@
-skeleton:
-    cost: 10
-    hp: 5
-    attack: 5
-    type: troop

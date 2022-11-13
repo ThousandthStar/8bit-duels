@@ -3,12 +3,13 @@ use bevy_egui::{egui, EguiContext};
 use serde_json::Value;
 
 use crate::{
-    game::{card::CardCollection, card_interactions::SelectedCardEntity},
+    card_interactions::SelectedCardEntity,
     net::{self, QueueOut},
     tilemap::TileSize,
     GameState,
 };
 
+use common::card::CardCollection;
 use std::{fmt, fmt::Display};
 
 pub struct UiPlugin;
