@@ -9,7 +9,8 @@ use std::{
     thread,
 };
 
-use game::{card::CardCollection, Game};
+use common::card::CardCollection;
+use game::Game;
 use log::{info, warn};
 use net::client::Client;
 use simple_logger::SimpleLogger;
@@ -17,7 +18,7 @@ use simple_logger::SimpleLogger;
 fn main() {
     SimpleLogger::new().init().unwrap();
     const port: i32 = 1000;
-    let card_collection = CardCollection::init();
+    let card_collection = CardCollection::new();
     let listener: TcpListener =
         TcpListener::bind(format!("127.0.0.1:{}", port)).expect("Couldn't bind port");
     let mut pending: Option<Client> = None;

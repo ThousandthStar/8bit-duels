@@ -5,7 +5,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{card::CardEntity, messages::ServerMessage};
-use serde_json::Value;
 
 pub(crate) struct PacketHandlerPlugin;
 
@@ -25,7 +24,7 @@ fn handle_packets(
     mut state: ResMut<State<GameState>>,
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
-    mut card_entity_q: Query<&mut CardEntity>,
+    mut card_entity_q: Query<(Entity, &mut CardEntity)>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
@@ -40,49 +39,58 @@ fn handle_packets(
                 }
                 state.set(GameState::Playing);
             }
-            "spawn-card" => {
-                if !matches!(packet["troop"].clone(), Value::Null) {
-                    let result = serde_json::from_value::<CardEntity>(packet["troop"].clone());
-                    if result.is_ok() {
-                        let card_entity = result.unwrap();
-                        let mut sprite = TextureAtlasSprite::new(
-                            card_sprites
-                                .1
-                                .get(&card_entity.card.get_name())
-                                .unwrap()
-                                .clone(),
-                        );
-                        sprite.custom_size = Some(Vec2::splat(tile_size.0 * 0.8));
+            ServerMessage::SpawnCard(card_entity) => {
+                let mut sprite = TextureAtlasSprite::new(
+                    card_sprites
+                        .1
+                        .get(&card_entity.get_card().get_name())
+                        .unwrap()
+                        .clone(),
+                );
+                sprite.custom_size = Some(Vec2::splat(tile_size.0 * 0.8));
 
-                        commands
-                            .spawn_bundle(SpriteSheetBundle {
-                                sprite,
-                                texture_atlas: card_sprites.0.clone(),
-                                transform: Transform::from_xyz(0., 0., 500.),
-                                ..Default::default()
-                            })
-                            .insert(card_entity);
-                    }
-                }
+                commands
+                    .spawn_bundle(SpriteSheetBundle {
+                        sprite,
+                        texture_atlas: card_sprites.0.clone(),
+                        transform: Transform::from_xyz(0., 0., 500.),
+                        ..Default::default()
+                    })
+                    .insert(card_entity);
             }
-            "move-troop" => {
-                let start_x = packet["start-x"].clone().as_f64().unwrap_or(f64::MAX);
-                let start_y = packet["start-y"].clone().as_f64().unwrap_or(f64::MAX);
-                let end_x = packet["end-x"].clone().as_f64().unwrap_or(f64::MAX);
-                let end_y = packet["end-y"].clone().as_f64().unwrap_or(f64::MAX);
-
-                for mut card_entity in card_entity_q.iter_mut() {
-                    if card_entity.get_x_pos() as f64 == start_x
-                        && card_entity.get_y_pos() as f64 == start_y
-                    {
+            ServerMessage::MoveTroop(start_x, start_y, end_x, end_y) => {
+                for (_, mut card_entity) in card_entity_q.iter_mut() {
+                    if card_entity.get_x_pos() == start_x && card_entity.get_y_pos() == start_y {
                         card_entity.set_x_pos(end_x);
                         card_entity.set_y_pos(end_y);
-                        card_entity.moved()
+                        card_entity.moved();
                     }
                 }
             }
-
-            &_ => {}
+            ServerMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
+                let mut attacker: Option<(Entity, Mut<CardEntity>)> = None;
+                let mut attacked: Option<(Entity, Mut<CardEntity>)> = None;
+                for (entity, mut card_entity) in card_entity_q.iter_mut() {
+                    if card_entity.clone().get_x_pos() == start_x
+                        && card_entity.clone().get_y_pos() == start_y
+                    {
+                        attacker = Some((entity, card_entity));
+                    } else if card_entity.clone().get_x_pos() == end_x
+                        && card_entity.clone().get_y_pos() == end_y
+                    {
+                        attacked = Some((entity, card_entity));
+                    }
+                }
+                let mut attacker = attacker.unwrap();
+                let mut attacked = attacked.unwrap();
+                attacked.1.current_hp -= attacker.1.get_card().get_damage();
+                if attacked.1.current_hp <= 0. {
+                    commands.entity(attacked.0).despawn();
+                    attacked.1.set_x_pos(end_x);
+                    attacked.1.set_y_pos(end_y);
+                }
+            }
+            _ => {}
         }
     }
 }

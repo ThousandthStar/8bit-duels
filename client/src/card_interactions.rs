@@ -1,11 +1,7 @@
-use crate::{
-    net::{packets, QueueOut},
-    tilemap::TileSize,
-    GameState, IsPlayer1, IsSelfTurn,
-};
+use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1, IsSelfTurn};
 use bevy::prelude::*;
 
-use common::card::CardEntity;
+use common::{card::CardEntity, messages::ClientMessage};
 
 pub(crate) struct CardInteractions;
 
@@ -107,7 +103,7 @@ fn setting_indicators_system(
                         && card_entity.is_owned_by_p1() != is_player_1.0
                     {
                         available = true;
-                        attack_indicator.2 = selected_card_entity.card.get_damage();
+                        attack_indicator.2 = selected_card_entity.get_card().get_damage();
                         break;
                     }
                 }
@@ -153,7 +149,7 @@ fn card_interactions_system(
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
             if visibility.is_visible {
                 let mut queue_out_guard = queue_out.0.lock().unwrap();
-                queue_out_guard.push_back(packets::move_packet(
+                queue_out_guard.push_back(ClientMessage::MoveTroop(
                     selected_card_entity.0.clone().unwrap().get_x_pos(),
                     selected_card_entity.0.clone().unwrap().get_y_pos(),
                     move_indicator.0,
@@ -169,7 +165,7 @@ fn card_interactions_system(
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
             if visibility.is_visible {
                 let mut queue_out_guard = queue_out.0.lock().unwrap();
-                queue_out_guard.push_back(packets::attack_packet(
+                queue_out_guard.push_back(ClientMessage::AttackTroop(
                     selected_card_entity.0.clone().unwrap().get_x_pos(),
                     selected_card_entity.0.clone().unwrap().get_y_pos(),
                     attack_indicator.0,

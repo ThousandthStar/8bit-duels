@@ -15,7 +15,7 @@ pub enum ServerMessage {
     4th param: the final   y position
     */
     MoveTroop(i32, i32, i32, i32),
-    AttackTroop(i32, i32, i32, i32, f32, bool),
+    AttackTroop(i32, i32, i32, i32),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

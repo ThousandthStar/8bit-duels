@@ -5,11 +5,13 @@ use serde_json::Value;
 use crate::{
     card_interactions::SelectedCardEntity,
     net::{self, QueueOut},
-    tilemap::TileSize,
     GameState,
 };
 
-use common::card::CardCollection;
+use common::{
+    card::{Card, CardCollection},
+    messages::ClientMessage,
+};
 use std::{fmt, fmt::Display};
 
 pub struct UiPlugin;
@@ -79,28 +81,16 @@ fn preparing_ui(
         }
         ui.add_space(9.);
         if ui.button("Ready").clicked() {
-            let mut serialized_deck: Vec<Value> = vec![];
+            let mut deck: Vec<Card> = vec![];
             for ui_card in deck_selection.deck_selection {
                 let card = match ui_card {
                     UiCard::Skeleton => card_collection.0.get("skeleton").unwrap(),
                     UiCard::GoldMine => card_collection.0.get("gold-mine").unwrap(),
                 };
-                serialized_deck.push(serde_json::to_value(card).unwrap());
-            }
-            let mut json: Value = serde_json::from_str(
-                r#"
-                {
-                    "packet-type": "player-deck"
-                }
-            "#,
-            )
-            .unwrap();
-            if let Value::Object(ref mut map) = json {
-                map.insert("deck".to_string(), Value::Array(serialized_deck));
+                deck.push(card.clone());
             }
             let mut mutex_guard = queue_out.0.lock().unwrap();
-            mutex_guard.push_back(json.to_string());
-            drop(mutex_guard);
+            mutex_guard.push_back(ClientMessage::Deck(deck));
         }
     });
 }

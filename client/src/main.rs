@@ -2,6 +2,7 @@ use bevy::render::texture::{ImageSampler, ImageSettings};
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::WorldInspectorPlugin;
+use common::card::CardCollection;
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -45,6 +46,7 @@ fn main() {
             resizable: false,
             ..Default::default()
         })
+        .insert_resource(CardCollection::new())
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
         .add_plugin(TilemapPlugin)
@@ -55,18 +57,6 @@ fn main() {
         .add_startup_system(spawn_camera)
         .add_state(GameState::Waiting)
         .run();
-}
-
-fn test(mut commands: Commands, card_sprites: Res<CardSprites>, tile_size: Res<TileSize>) {
-    let mut sprite = TextureAtlasSprite::new(card_sprites.1.get("skeleton").unwrap().clone());
-    sprite.custom_size = Some(Vec2::splat(tile_size.0));
-    let mut transform = Transform::from_xyz(0., 0., 500.);
-    commands.spawn_bundle(SpriteSheetBundle {
-        sprite,
-        texture_atlas: card_sprites.0.clone(),
-        transform,
-        ..Default::default()
-    });
 }
 
 #[derive(Component)]

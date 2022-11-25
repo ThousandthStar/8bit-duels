@@ -55,11 +55,11 @@ impl Card {
         }
     }
 
-    pub(crate) fn get_damage(&self) -> f32 {
+    pub fn get_damage(&self) -> f32 {
         self.attack.clone()
     }
 
-    pub(crate) fn get_name(&self) -> String {
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 }
@@ -73,8 +73,8 @@ enum CardType {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Component)]
 pub struct CardEntity {
-    pub(crate) card: Card,
-    current_hp: f32,
+    card: Card,
+    pub current_hp: f32,
     position_x: i32,
     position_y: i32,
     is_owned_by_p1: bool,
@@ -83,23 +83,35 @@ pub struct CardEntity {
 }
 
 impl CardEntity {
-    pub(crate) fn get_x_pos(&self) -> i32 {
+    pub fn new(card: &Card, position_x: i32, position_y: i32, is_owned_by_p1: bool) -> CardEntity {
+        CardEntity {
+            card: card.clone(),
+            position_x,
+            position_y,
+            is_owned_by_p1,
+            current_hp: card.hp,
+            has_moved: false,
+            has_attacked: false,
+        }
+    }
+
+    pub fn get_x_pos(&self) -> i32 {
         self.position_x.clone()
     }
 
-    pub(crate) fn get_y_pos(&self) -> i32 {
+    pub fn get_y_pos(&self) -> i32 {
         self.position_y.clone()
     }
 
-    pub(crate) fn set_x_pos(&mut self, x: f64) {
-        self.position_x = x as i32;
+    pub fn set_x_pos(&mut self, x: i32) {
+        self.position_x = x;
     }
 
-    pub(crate) fn set_y_pos(&mut self, y: f64) {
-        self.position_y = y as i32;
+    pub fn set_y_pos(&mut self, y: i32) {
+        self.position_y = y;
     }
 
-    pub(crate) fn is_owned_by_p1(&self) -> bool {
+    pub fn is_owned_by_p1(&self) -> bool {
         if self.is_owned_by_p1 {
             true
         } else {
@@ -107,20 +119,24 @@ impl CardEntity {
         }
     }
 
-    pub(crate) fn has_moved(&self) -> bool {
+    pub fn has_moved(&self) -> bool {
         self.has_moved.clone()
     }
 
-    pub(crate) fn has_attacked(&self) -> bool {
+    pub fn has_attacked(&self) -> bool {
         self.has_attacked.clone()
     }
 
-    pub(crate) fn moved(&mut self) {
+    pub fn moved(&mut self) {
         self.has_moved = true;
     }
 
-    pub(crate) fn attacked(&mut self) {
+    pub fn attacked(&mut self) {
         self.has_attacked = true;
+    }
+
+    pub fn get_card(&self) -> Card {
+        self.card.clone()
     }
 }
 

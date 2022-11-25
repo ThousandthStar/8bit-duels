@@ -1,4 +1,23 @@
+use byteorder::{BigEndian, WriteBytesExt};
+use common::messages::ServerMessage;
 use serde_json::Value;
+use std::error::Error;
+use std::io::{self, Write};
+use std::net::TcpStream;
+
+#[macro_export]
+macro_rules! to_p2_x {
+    ($x:expr) => {
+        4 - $x
+    };
+}
+
+#[macro_export]
+macro_rules! to_p2_y {
+    ($y: expr) => {
+        8 - $y
+    };
+}
 
 pub(crate) struct Vec2 {
     x: i32,
@@ -17,25 +36,20 @@ impl Vec2 {
     }
 }
 
-pub(crate) fn get_targeted_action_positions(packet: Value) -> Option<(f64, f64, f64, f64)> {
-    if !matches!(packet["start-x"].clone(), Value::Number(_))
-        || !matches!(packet["start-y"].clone(), Value::Number(_))
-        || !matches!(packet["end-x"].clone(), Value::Number(_))
-        || !matches!(packet["end-y"].clone(), Value::Number(_))
-    {
-        return None;
-    }
-    let start_x: f64 = packet["start-x"].clone().as_f64().unwrap_or(f64::MAX);
-    let start_y: f64 = packet["start-y"].clone().as_f64().unwrap_or(f64::MAX);
-    let end_x: f64 = packet["end-x"].clone().as_f64().unwrap_or(f64::MAX);
-    let end_y: f64 = packet["end-y"].clone().as_f64().unwrap_or(f64::MAX);
+pub trait WritePacket {
+    fn write_packet(&mut self, packet: ServerMessage);
+}
 
-    if !(start_x as usize) < 5
-        || !(start_y as usize) < 9
-        || !(end_x as usize) < 5
-        || !(end_y as usize) < 9
-    {
-        return None;
+impl WritePacket for TcpStream {
+    fn write_packet(&mut self, packet: ServerMessage) {
+        if let Ok(binding) = serde_json::to_string(&packet) {
+            let bytes = binding.as_bytes();
+            let mut wtr_buf_len = vec![];
+            wtr_buf_len
+                .write_u32::<BigEndian>(bytes.len() as u32)
+                .unwrap();
+            self.write(&wtr_buf_len);
+            self.write(bytes);
+        }
     }
-    return Some((start_x, start_y, end_x, end_y));
 }
