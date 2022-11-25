@@ -9,7 +9,7 @@ path = "tests/byteorder-test.rs"
 harness = false
 
 [dependencies]
-bevy = {version="0.8.0", features=["dynamic"]}
+bevy = {version="0.9.0", features=["dynamic"]}
 bevy-inspector-egui = "0.12.1"
 bevy_egui = "0.16.0"
 serde = "1.0.144"

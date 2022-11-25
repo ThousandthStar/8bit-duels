@@ -8,3 +8,11 @@ A turn-based multiplayer strategy game written in Rust with the Bevy game engine
 * Download the source code
 * Go to server and run it (needs root permission to set up TCP connection)
 * Run two clients
+
+#### Licenses: 
+
+The project is licensed under the MIT Licence, except for these files, found in the `client/assets` folder:
+
+* `Monocraft.otf`
+* `Monocraft.kayak_font`
+* `Monocraft.png`
