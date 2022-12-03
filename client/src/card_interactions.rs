@@ -25,7 +25,7 @@ impl Plugin for CardInteractions {
 pub(crate) struct MoveIndicator(pub(crate) i32, pub(crate) i32);
 #[derive(Component)]
 pub(crate) struct AttackIndicator(pub(crate) i32, pub(crate) i32, pub(crate) f32);
-
+#[derive(Resource)]
 pub(crate) struct SelectedCardEntity(pub(crate) Option<CardEntity>);
 
 fn card_selecting_system(

@@ -4,26 +4,25 @@ use crate::card_interactions::{AttackIndicator, MoveIndicator};
 use common::card::CardEntity;
 use std::collections::HashMap;
 
+#[derive(Resource)]
 pub struct TileSize(pub f32);
 
 pub struct TilemapPlugin;
 
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(TileSize(
-            app.world
-                .get_resource::<Windows>()
-                .unwrap()
-                .get_primary()
-                .unwrap()
-                .height()
-                / 9.,
-        ))
-        .add_startup_system(spawn_tilemap_bg)
-        .add_system(position_sprites)
-        .add_system(load_card_sprites);
+        app.add_startup_system(spawn_tilemap_bg)
+            .add_startup_system_to_stage(StartupStage::PreStartup, add_tile_size_res)
+            .add_system(position_sprites)
+            .add_system(load_card_sprites);
     }
 }
+
+fn add_tile_size_res(mut commands: Commands, windows: Res<Windows>) {
+    commands.insert_resource(TileSize(windows.get_primary().unwrap().height() / 9.));
+}
+
+#[derive(Resource)]
 pub(crate) struct CardSprites(
     pub(crate) Handle<TextureAtlas>,
     pub(crate) HashMap<String, usize>,
@@ -35,7 +34,8 @@ fn load_card_sprites(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let sprite_sheet = asset_server.load("sprite_sheet.png");
-    let atlas: TextureAtlas = TextureAtlas::from_grid(sprite_sheet, Vec2::splat(8.), 1, 1);
+    let atlas: TextureAtlas =
+        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(8.), 1, 1, None, None);
 
     let atlas_handle = texture_atlases.add(atlas);
     let mut card_sprite_map = HashMap::new();

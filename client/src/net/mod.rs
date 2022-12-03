@@ -13,7 +13,9 @@ use std::{
 use bevy::prelude::*;
 use common::messages::{ClientMessage, ServerMessage};
 
+#[derive(Resource)]
 pub(crate) struct QueueIn(pub(crate) Arc<Mutex<VecDeque<ServerMessage>>>);
+#[derive(Resource)]
 pub(crate) struct QueueOut(pub(crate) Arc<Mutex<VecDeque<ClientMessage>>>);
 
 pub(crate) fn init(commands: &mut Commands) {

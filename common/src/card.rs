@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Resource)]
 pub struct CardCollection(pub HashMap<String, Card>);
 
 impl CardCollection {

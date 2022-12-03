@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
+use kayak_ui::prelude::{widgets::*, *};
 use serde_json::Value;
 
 use crate::{
     card_interactions::SelectedCardEntity,
     net::{self, QueueOut},
+    tilemap::TileSize,
     GameState,
 };
 
@@ -19,6 +21,9 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(GameState::Waiting).with_system(waiting_ui))
+            .add_plugin(KayakContextPlugin)
+            .add_plugin(KayakWidgets)
+            .add_startup_system_to_stage(StartupStage::PostStartup, startup)
             .add_system_set(
                 SystemSet::on_update(GameState::PreparingForGame).with_system(preparing_ui),
             )
@@ -27,6 +32,56 @@ impl Plugin for UiPlugin {
             })
             .add_system_set(SystemSet::on_update(GameState::Playing).with_system(in_game_ui));
     }
+}
+
+fn startup(
+    mut commands: Commands,
+    mut font_mapping: ResMut<FontMapping>,
+    tile_size: Res<TileSize>,
+    asset_server: Res<AssetServer>,
+) {
+    font_mapping.set_default(asset_server.load("Monocraft.kayak_font"));
+    let mut widget_context = KayakRootContext::new();
+    widget_context.add_plugin(KayakWidgetsContextPlugin);
+    let parent_id = None;
+    let ui_bg_image = asset_server.load("ui_background.png");
+    rsx! {
+        <KayakAppBundle>
+            <NinePatchBundle
+                styles={KStyle {
+                    width: StyleProp::Value(Units::Pixels(tile_size.0 * 5.0)),
+                    height: StyleProp::Value(Units::Pixels(tile_size.0 * 9.0)),
+                    ..KStyle::default()
+                }}
+                nine_patch={NinePatch{
+                    handle: ui_bg_image,
+                    ..Default::default()
+                }}
+            >
+
+                <ElementBundle
+                    styles={KStyle {
+                        offset: StyleProp::Value(Edge::axis(Units::Pixels(tile_size.0 * 1.35), Units::Pixels(tile_size.0))),
+                        ..KStyle::default()
+                    }}
+                >
+                    <TextWidgetBundle
+                        text={TextProps {
+                            content: "8bit Duels".into(),
+                            size: 20.0,
+                            user_styles: KStyle{
+                                color: StyleProp::Value(Color::hex("a05e5e").unwrap_or(Color::BLACK)),
+                                ..KStyle::default()
+                            },
+                            ..Default::default()
+                        }}
+                    />
+                </ElementBundle>
+            </NinePatchBundle>
+        </KayakAppBundle>
+    }
+
+    commands.spawn(UICameraBundle::new(widget_context));
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -47,6 +102,7 @@ impl Display for UiCard {
     }
 }
 
+#[derive(Resource)]
 struct DeckSelection {
     deck_selection: [UiCard; 10],
 }

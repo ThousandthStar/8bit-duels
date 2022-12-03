@@ -1,7 +1,5 @@
-use bevy::render::texture::{ImageSampler, ImageSettings};
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use common::card::CardCollection;
 use std::{
     io::{Read, Write},
@@ -25,35 +23,37 @@ pub(crate) enum GameState {
     Playing,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Resource)]
 pub(crate) struct IsPlayer1(pub(crate) bool);
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Resource)]
 pub(crate) struct IsSelfTurn(pub(crate) bool);
 
 #[warn(unused_must_use)]
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
     App::new()
-        .insert_resource(ImageSettings {
-            default_sampler: ImageSampler::nearest_descriptor(),
-        })
-        .insert_resource(WindowDescriptor {
-            width: 750.0,
-            height: 450.0,
-            title: "Multiplayer Game".to_string(),
-            present_mode: PresentMode::Fifo,
-            resizable: false,
-            ..Default::default()
-        })
         .insert_resource(CardCollection::new())
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        width: 750.0,
+                        height: 450.0,
+                        title: "Multiplayer Game".to_string(),
+                        present_mode: PresentMode::Fifo,
+                        resizable: false,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugin(EguiPlugin)
         .add_plugin(TilemapPlugin)
         .add_plugin(UiPlugin)
         .add_plugin(PacketHandlerPlugin)
         .add_plugin(CardInteractions)
-        .add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(spawn_camera)
         .add_state(GameState::Waiting)
         .run();
