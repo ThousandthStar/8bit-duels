@@ -23,4 +23,5 @@ pub enum ClientMessage {
     Deck(Vec<Card>),
     MoveTroop(i32, i32, i32, i32),
     AttackTroop(i32, i32, i32, i32),
+    EndTurn,
 }

@@ -1,5 +1,6 @@
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
+use bevy_inspector_egui::WorldInspectorPlugin;
 use common::card::CardCollection;
 use std::{
     io::{Read, Write},

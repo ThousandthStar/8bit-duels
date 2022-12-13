@@ -86,7 +86,7 @@ impl Game {
                 guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), to_p2_x!(4), to_p2_y!(3), true)));
                 guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), to_p2_x!(3), to_p2_y!(3), false)));
                 game_board[3][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, true));
-                game_board[4][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 4, false));
+                game_board[3][3] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 3, 3, false));
                 let mut is_player_1_turn = true;
 
                 info!("starting game");
@@ -129,6 +129,7 @@ impl Game {
                                 ClientMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
                                     let card_to_attack = game_board[start_y as usize][start_x as usize].clone();
                                         let where_to_attack = game_board[end_y as usize][end_x as usize].clone();
+                                        println!("b");
 
                                         if card_to_attack.is_none() || where_to_attack.is_none(){
                                             continue;
@@ -141,6 +142,7 @@ impl Game {
                                             && !card_to_attack.has_attacked()
                                             && where_to_attack.is_owned_by_p1() != is_player_1_turn
                                         {
+                                            println!("a");
                                             card_to_attack.attacked();
                                             card_to_attack.moved();
                                             where_to_attack.current_hp -= card_to_attack.get_card().get_damage();

@@ -1,4 +1,4 @@
-use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1, IsSelfTurn};
+use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1, IsSelfTurn, MainCamera};
 use bevy::prelude::*;
 
 use common::{card::CardEntity, messages::ClientMessage};
@@ -8,6 +8,7 @@ pub(crate) struct CardInteractions;
 impl Plugin for CardInteractions {
     fn build(&self, app: &mut App) {
         app.insert_resource(SelectedCardEntity(None))
+            .insert_resource(ViewingCardEntity(None))
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(card_selecting_system),
             )
@@ -22,26 +23,49 @@ impl Plugin for CardInteractions {
 
 // components to flag movement and attack indicators
 #[derive(Component)]
-pub(crate) struct MoveIndicator(pub(crate) i32, pub(crate) i32);
+pub struct MoveIndicator(pub i32, pub i32);
 #[derive(Component)]
-pub(crate) struct AttackIndicator(pub(crate) i32, pub(crate) i32, pub(crate) f32);
-#[derive(Resource)]
-pub(crate) struct SelectedCardEntity(pub(crate) Option<CardEntity>);
+pub struct AttackIndicator(pub i32, pub i32, pub f32);
+#[derive(Resource, Clone, Debug)]
+pub struct SelectedCardEntity(pub Option<CardEntity>);
+#[derive(Resource, Clone, Debug)]
+pub struct ViewingCardEntity(pub Option<CardEntity>);
 
 fn card_selecting_system(
     mouse: Res<Input<MouseButton>>,
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
-    cam_q: Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+    cam_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     is_player_1: Res<IsPlayer1>,
-    mut card_entity_q: Query<(&Transform, &mut CardEntity), Without<Camera>>,
+    mut card_entity_q: Query<(&Transform, &mut CardEntity), Without<MainCamera>>,
     mut selected_card_entity: ResMut<SelectedCardEntity>,
+    mut viewing_card_entity: ResMut<ViewingCardEntity>,
 ) {
     for (transform, mut card_entity) in card_entity_q.iter_mut() {
-        if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q)
-            && is_player_1.0 == card_entity.is_owned_by_p1()
-        {
-            selected_card_entity.0 = Some(card_entity.clone());
+        if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
+            match selected_card_entity.0.clone() {
+                Some(selected_card) => {
+                    if selected_card.get_x_pos() == card_entity.get_x_pos()
+                        && selected_card.get_y_pos() == card_entity.get_y_pos()
+                    {
+                        if card_entity.is_owned_by_p1() == is_player_1.0 {
+                            selected_card_entity.0 = None;
+                        }
+                        viewing_card_entity.0 = None;
+                    } else {
+                        if card_entity.is_owned_by_p1() == is_player_1.0 {
+                            selected_card_entity.0 = Some(card_entity.clone());
+                        }
+                        viewing_card_entity.0 = Some(card_entity.clone());
+                    }
+                }
+                None => {
+                    if card_entity.is_owned_by_p1() == is_player_1.0 {
+                        selected_card_entity.0 = Some(card_entity.clone());
+                    }
+                    viewing_card_entity.0 = Some(card_entity.clone());
+                }
+            }
         }
     }
 }
@@ -129,16 +153,24 @@ fn card_interactions_system(
     mut selected_card_entity: ResMut<SelectedCardEntity>,
     move_indicator_q: Query<
         (&MoveIndicator, &Visibility, &Transform),
-        (Without<AttackIndicator>, Without<CardEntity>),
+        (
+            Without<AttackIndicator>,
+            Without<CardEntity>,
+            Without<MainCamera>,
+        ),
     >,
     attack_indicator_q: Query<
         (&AttackIndicator, &Visibility, &Transform),
-        (Without<MoveIndicator>, Without<CardEntity>),
+        (
+            Without<MoveIndicator>,
+            Without<CardEntity>,
+            Without<MainCamera>,
+        ),
     >,
     mouse: Res<Input<MouseButton>>,
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
-    cam_q: Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+    cam_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     is_self_turn: Res<IsSelfTurn>,
 ) {
     if selected_card_entity.0.is_none() {
@@ -171,6 +203,8 @@ fn card_interactions_system(
                     attack_indicator.0,
                     attack_indicator.1,
                 ));
+                selected_card_entity.0 = None;
+                return;
             }
         }
     }
@@ -181,7 +215,7 @@ pub(crate) fn is_transform_clicked(
     mouse: &Res<Input<MouseButton>>,
     windows: &Res<Windows>,
     tile_size: &Res<TileSize>,
-    cam_q: &Query<(&Camera, &GlobalTransform), Without<CardEntity>>,
+    cam_q: &Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) -> bool {
     let window = windows.primary();
     if let Some(screen_pos) = window.cursor_position() {

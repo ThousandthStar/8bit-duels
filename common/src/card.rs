@@ -29,7 +29,7 @@ impl CardCollection {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Card {
-    name: String,
+    pub name: String,
     type_: CardType,
     hp: f32,
     attack: f32,

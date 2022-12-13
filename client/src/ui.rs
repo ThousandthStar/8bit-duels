@@ -4,7 +4,7 @@ use kayak_ui::prelude::{widgets::*, *};
 use serde_json::Value;
 
 use crate::{
-    card_interactions::SelectedCardEntity,
+    card_interactions::{SelectedCardEntity, ViewingCardEntity},
     net::{self, QueueOut},
     tilemap::TileSize,
     GameState,
@@ -39,6 +39,7 @@ fn startup(
     mut font_mapping: ResMut<FontMapping>,
     tile_size: Res<TileSize>,
     asset_server: Res<AssetServer>,
+    selected_card_entity: Res<SelectedCardEntity>,
 ) {
     font_mapping.set_default(asset_server.load("Monocraft.kayak_font"));
     let mut widget_context = KayakRootContext::new();
@@ -47,36 +48,44 @@ fn startup(
     let ui_bg_image = asset_server.load("ui_background.png");
     rsx! {
         <KayakAppBundle>
-            <NinePatchBundle
-                styles={KStyle {
-                    width: StyleProp::Value(Units::Pixels(tile_size.0 * 5.0)),
-                    height: StyleProp::Value(Units::Pixels(tile_size.0 * 9.0)),
-                    ..KStyle::default()
-                }}
-                nine_patch={NinePatch{
-                    handle: ui_bg_image,
-                    ..Default::default()
-                }}
-            >
-
-                <ElementBundle
-                    styles={KStyle {
-                        offset: StyleProp::Value(Edge::axis(Units::Pixels(tile_size.0 * 1.35), Units::Pixels(tile_size.0))),
-                        ..KStyle::default()
-                    }}
-                >
-                    <TextWidgetBundle
-                        text={TextProps {
-                            content: "8bit Duels".into(),
-                            size: 20.0,
-                            user_styles: KStyle{
-                                color: StyleProp::Value(Color::hex("a05e5e").unwrap_or(Color::BLACK)),
-                                ..KStyle::default()
-                            },
+            <NinePatchBundle>
+                    <NinePatchBundle
+                        nine_patch = {NinePatch{
+                            handle: ui_bg_image.clone(),
                             ..Default::default()
                         }}
+                        styles = {KStyle{
+                            width: StyleProp::Value(Units::Pixels(tile_size.0 * 5.0)),
+                            height: StyleProp::Value(Units::Pixels(tile_size.0 * 9.0)),
+                            ..KStyle::default()
+                        }}
+                    >
+                        <TextWidgetBundle
+                            text={TextProps {
+                                content: "8bit Duels".into(),
+                                size: 20.0,
+                                user_styles: KStyle{
+                                    color: StyleProp::Value(Color::hex("a05e5e").unwrap_or(Color::BLACK)),
+                                    offset: StyleProp::Value(Edge::axis(Units::Pixels(tile_size.0 * 1.35), Units::Pixels(tile_size.0))),
+                                    ..KStyle::default()
+                                },
+                                ..Default::default()
+                            }}
+                        />
+                    </NinePatchBundle>
+
+                    <NinePatchBundle
+                        nine_patch = {NinePatch{
+                            handle: ui_bg_image,
+                            ..Default::default()
+                        }}
+                        styles = {KStyle{
+                            width: StyleProp::Value(Units::Pixels(tile_size.0 * 5.0)),
+                            height: StyleProp::Value(Units::Pixels(tile_size.0 * 9.0)),
+                            left: StyleProp::Value(Units::Pixels(tile_size.0 * 10.0)),
+                            ..KStyle::default()
+                        }}
                     />
-                </ElementBundle>
             </NinePatchBundle>
         </KayakAppBundle>
     }
@@ -165,8 +174,14 @@ fn waiting_ui(
     });
 }
 
-fn in_game_ui(mut context: ResMut<EguiContext>, selected_card: Res<SelectedCardEntity>) {
+fn in_game_ui(mut context: ResMut<EguiContext>, selected_card: Res<ViewingCardEntity>) {
     egui::Window::new("Playing").show(context.ctx_mut(), |ui| {
-        ui.monospace("Playing the game!");
+        ui.label("Playing the game!");
+        if let Some(card_entity) = selected_card.0.clone() {
+            ui.monospace(format!("Current card: {}", card_entity.get_card().name));
+            ui.monospace(format!("Attack: {}", card_entity.get_card().get_damage()));
+            ui.monospace(format!("HP: {}", card_entity.current_hp));
+        }
+        if ui.button("End turn").clicked() {}
     });
 }
