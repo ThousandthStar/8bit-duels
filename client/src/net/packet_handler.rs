@@ -25,17 +25,19 @@ fn handle_packets(
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
     mut card_entity_q: Query<(Entity, &mut CardEntity)>,
+    mut is_self_turn: ResMut<IsSelfTurn>,
+    mut is_player_1_res: ResMut<IsPlayer1>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
         match message {
             ServerMessage::StartGame(is_player_1) => {
                 if is_player_1 {
-                    commands.insert_resource(IsPlayer1(true));
-                    commands.insert_resource(IsSelfTurn(true));
+                    is_self_turn.0 = true;
+                    is_player_1_res.0 = true;
                 } else {
-                    commands.insert_resource(IsPlayer1(false));
-                    commands.insert_resource(IsSelfTurn(false));
+                    is_self_turn.0 = false;
+                    is_player_1_res.0 = false;
                 }
                 state.set(GameState::Playing);
             }
@@ -89,6 +91,9 @@ fn handle_packets(
                     attacked.1.set_x_pos(end_x);
                     attacked.1.set_y_pos(end_y);
                 }
+            }
+            ServerMessage::StartTurn => {
+                is_self_turn.0 = true;
             }
             _ => {}
         }

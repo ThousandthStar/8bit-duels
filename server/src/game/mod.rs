@@ -91,8 +91,14 @@ impl Game {
 
                 info!("starting game");
                 loop{
+                    let mut queue_guard;
                     if is_player_1_turn{
-                        let mut queue_guard = queue_1.lock().unwrap();
+                        queue_guard = queue_1.lock().unwrap();
+                    }
+                    else{
+                        queue_guard = queue_2.lock().unwrap();
+                    }
+
                         if let Some(message) = queue_guard.pop_front() {
                             match message {
                                 ClientMessage::MoveTroop(start_x, start_y, end_x, end_y) => {
@@ -129,7 +135,6 @@ impl Game {
                                 ClientMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
                                     let card_to_attack = game_board[start_y as usize][start_x as usize].clone();
                                         let where_to_attack = game_board[end_y as usize][end_x as usize].clone();
-                                        println!("b");
 
                                         if card_to_attack.is_none() || where_to_attack.is_none(){
                                             continue;
@@ -142,7 +147,6 @@ impl Game {
                                             && !card_to_attack.has_attacked()
                                             && where_to_attack.is_owned_by_p1() != is_player_1_turn
                                         {
-                                            println!("a");
                                             card_to_attack.attacked();
                                             card_to_attack.moved();
                                             where_to_attack.current_hp -= card_to_attack.get_card().get_damage();
@@ -166,18 +170,20 @@ impl Game {
                                             drop(guard);
                                             drop(guard_2);
                                         }
-
-
                                 },
                                 ClientMessage::Deck(_) => {},
+                                ClientMessage::EndTurn => {
+                                    if is_player_1_turn {
+                                        out_2.lock().unwrap().write_packet(ServerMessage::StartTurn);
+                                    } else{
+                                        out_1.lock().unwrap().write_packet(ServerMessage::StartTurn);
+                                    }
+                                    is_player_1_turn = !is_player_1_turn;
+                                },
                                 _ => {}
                             }
                         }
                     }
-                }
-
-
-
             }),
         );
     }

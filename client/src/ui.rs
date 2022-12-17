@@ -7,7 +7,7 @@ use crate::{
     card_interactions::{SelectedCardEntity, ViewingCardEntity},
     net::{self, QueueOut},
     tilemap::TileSize,
-    GameState,
+    GameState, IsSelfTurn,
 };
 
 use common::{
@@ -46,12 +46,13 @@ fn startup(
     widget_context.add_plugin(KayakWidgetsContextPlugin);
     let parent_id = None;
     let ui_bg_image = asset_server.load("ui_background.png");
+    let ui_bg_image_2 = asset_server.load("ui_background.png");
     rsx! {
         <KayakAppBundle>
             <NinePatchBundle>
                     <NinePatchBundle
                         nine_patch = {NinePatch{
-                            handle: ui_bg_image.clone(),
+                            handle: ui_bg_image,
                             ..Default::default()
                         }}
                         styles = {KStyle{
@@ -76,13 +77,19 @@ fn startup(
 
                     <NinePatchBundle
                         nine_patch = {NinePatch{
-                            handle: ui_bg_image,
+                            handle: ui_bg_image_2,
                             ..Default::default()
                         }}
                         styles = {KStyle{
                             width: StyleProp::Value(Units::Pixels(tile_size.0 * 5.0)),
                             height: StyleProp::Value(Units::Pixels(tile_size.0 * 9.0)),
                             left: StyleProp::Value(Units::Pixels(tile_size.0 * 10.0)),
+                            offset: StyleProp::Value(Edge::new(
+                                    Units::Pixels(tile_size.0 * -9.0),
+                                    Units::Auto,
+                                    Units::Auto,
+                                    Units::Auto
+                            )),
                             ..KStyle::default()
                         }}
                     />
@@ -174,14 +181,30 @@ fn waiting_ui(
     });
 }
 
-fn in_game_ui(mut context: ResMut<EguiContext>, selected_card: Res<ViewingCardEntity>) {
+fn in_game_ui(
+    mut context: ResMut<EguiContext>,
+    selected_card: Res<ViewingCardEntity>,
+    mut queue_out: ResMut<QueueOut>,
+    mut is_self_turn: ResMut<IsSelfTurn>,
+) {
     egui::Window::new("Playing").show(context.ctx_mut(), |ui| {
-        ui.label("Playing the game!");
+        if is_self_turn.0 {
+            ui.label("Your turn!");
+            if ui.button("End turn").clicked() {
+                queue_out
+                    .0
+                    .lock()
+                    .unwrap()
+                    .push_back(ClientMessage::EndTurn);
+                is_self_turn.0 = false;
+            }
+        } else {
+            ui.label("Opponent's turn!");
+        }
         if let Some(card_entity) = selected_card.0.clone() {
             ui.monospace(format!("Current card: {}", card_entity.get_card().name));
             ui.monospace(format!("Attack: {}", card_entity.get_card().get_damage()));
             ui.monospace(format!("HP: {}", card_entity.current_hp));
         }
-        if ui.button("End turn").clicked() {}
     });
 }

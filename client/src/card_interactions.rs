@@ -139,10 +139,10 @@ fn setting_indicators_system(
             }
         }
     } else {
-        for (move_indicator, mut visibility) in move_indicator_q.iter_mut() {
+        for (_, mut visibility) in move_indicator_q.iter_mut() {
             visibility.is_visible = false;
         }
-        for (attack_indicator, mut visibility) in attack_indicator_q.iter_mut() {
+        for (_, mut visibility) in attack_indicator_q.iter_mut() {
             visibility.is_visible = false;
         }
     }

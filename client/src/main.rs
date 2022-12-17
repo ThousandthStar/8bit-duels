@@ -35,6 +35,8 @@ fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
     App::new()
         .insert_resource(CardCollection::new())
+        .insert_resource(IsSelfTurn(false))
+        .insert_resource(IsPlayer1(false))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
