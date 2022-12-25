@@ -9,7 +9,7 @@ path = "tests/kayak_ui_test.rs"
 harness = false
 
 [dependencies]
-bevy = {version="0.9.0", features=["dynamic"]}
+bevy = {version="0.9.0", features = ["dynamic"]}
 bevy_egui = "0.17.0"
 bevy-inspector-egui = "0.14"
 kayak_ui = { git = "https://github.com/StarArawn/kayak_ui/", rev = "97c02526cec9999e7fc6dccc778b72f2ffd455be"}

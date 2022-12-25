@@ -48,7 +48,7 @@ impl WritePacket for TcpStream {
             wtr_buf_len
                 .write_u32::<BigEndian>(bytes.len() as u32)
                 .unwrap();
-            self.write(&wtr_buf_len);
+            self.write(wtr_buf_len.as_slice());
             self.write(bytes);
         }
     }

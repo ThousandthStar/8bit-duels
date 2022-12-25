@@ -35,11 +35,12 @@ fn load_card_sprites(
 ) {
     let sprite_sheet = asset_server.load("sprite_sheet.png");
     let atlas: TextureAtlas =
-        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(8.), 1, 1, None, None);
+        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(32.0), 1, 2, None, None);
 
     let atlas_handle = texture_atlases.add(atlas);
     let mut card_sprite_map = HashMap::new();
     card_sprite_map.insert("skeleton".to_string(), 0);
+    card_sprite_map.insert("reaper".to_string(), 1);
 
     commands.insert_resource(CardSprites(atlas_handle, card_sprite_map));
 }

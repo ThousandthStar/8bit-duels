@@ -2,36 +2,43 @@ use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::WorldInspectorPlugin;
 use common::card::CardCollection;
+use currency::CurrencyPlugin;
 use std::{
     io::{Read, Write},
     net::TcpStream,
 };
 
-pub(crate) mod card_interactions;
-pub(crate) mod net;
-pub(crate) mod tilemap;
-pub(crate) mod ui;
+pub mod card_interactions;
+pub mod currency;
+pub mod net;
+pub mod tilemap;
+pub mod ui;
+pub mod utils;
 
 use card_interactions::CardInteractions;
+use common::card::Card;
 use net::packet_handler::PacketHandlerPlugin;
-use tilemap::{CardSprites, TileSize, TilemapPlugin};
+use tilemap::TilemapPlugin;
 use ui::UiPlugin;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) enum GameState {
+pub enum GameState {
     Waiting,
     PreparingForGame,
     Playing,
 }
 
 #[derive(Copy, Clone, Debug, Resource)]
-pub(crate) struct IsPlayer1(pub(crate) bool);
+pub struct IsPlayer1(pub bool);
 
 #[derive(Copy, Clone, Debug, Resource)]
-pub(crate) struct IsSelfTurn(pub(crate) bool);
+pub struct IsSelfTurn(pub bool);
+
+#[derive(Clone, Debug, Resource)]
+pub struct Deck(pub Vec<Card>);
 
 #[warn(unused_must_use)]
-fn main() {
+pub fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
     App::new()
         .insert_resource(CardCollection::new())
@@ -57,6 +64,7 @@ fn main() {
         .add_plugin(UiPlugin)
         .add_plugin(PacketHandlerPlugin)
         .add_plugin(CardInteractions)
+        .add_plugin(CurrencyPlugin)
         .add_startup_system(spawn_camera)
         .add_state(GameState::Waiting)
         .run();

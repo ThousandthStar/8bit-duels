@@ -49,6 +49,10 @@ impl Game {
                 let mut deck_1: Option<Vec<Card>> = None;
                 let mut deck_2: Option<Vec<Card>> = None;
                 let mut player_1: bool = true;
+                let mut player_1_pawns: i32 = 6;
+                let mut player_2_pawns: i32 = 6;
+                let mut player_1_spirits: i32 = 100;
+                let mut player_2_spirits: i32 = 100;
                 // first check to get player decks
                 loop{
                     let mut guard;
@@ -79,14 +83,10 @@ impl Game {
                 }
                 let mut guard = out_1.lock().unwrap();
                 guard.write_packet(ServerMessage::StartGame(true));
-                guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, true)));
-                guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), 3, 3, false)));
+                guard.write_packet(ServerMessage::StartTurn);
                 guard = out_2.lock().unwrap();
                 guard.write_packet(ServerMessage::StartGame(false));
-                guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), to_p2_x!(4), to_p2_y!(3), true)));
-                guard.write_packet(ServerMessage::SpawnCard(CardEntity::new(cards.0.get("skeleton").unwrap(), to_p2_x!(3), to_p2_y!(3), false)));
-                game_board[3][4] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 4, 3, true));
-                game_board[3][3] = Some(CardEntity::new(cards.0.get("skeleton").unwrap(), 3, 3, false));
+                drop(guard);
                 let mut is_player_1_turn = true;
 
                 info!("starting game");
@@ -94,14 +94,22 @@ impl Game {
                     let mut queue_guard;
                     if is_player_1_turn{
                         queue_guard = queue_1.lock().unwrap();
+                        player_1_spirits += 1;
                     }
                     else{
                         queue_guard = queue_2.lock().unwrap();
+                        player_2_spirits += 1;
                     }
 
                         if let Some(message) = queue_guard.pop_front() {
                             match message {
-                                ClientMessage::MoveTroop(start_x, start_y, end_x, end_y) => {
+                                ClientMessage::MoveTroop(mut start_x, mut start_y, mut end_x, mut end_y) => {
+                                    if !is_player_1_turn{
+                                       start_x = 4 - start_x;
+                                       start_y = 8 - start_y;
+                                       end_x = 4 - end_x;
+                                       end_y = 8 - end_y;
+                                    }
                                     let card_to_move = game_board[start_y as usize][start_x as usize].clone();
                                     let where_to_move = game_board[end_y as usize][end_x as usize].clone();
                                     if card_to_move.is_none(){
@@ -114,25 +122,26 @@ impl Game {
                                         && is_player_1_turn == card_to_move.is_owned_by_p1()
                                         && !card_to_move.has_attacked()
                                         && !card_to_move.has_moved()
+                                        && card_to_move.stun_count == 0
                                     {
                                         game_board[start_y as usize][start_x as usize] = None;
                                         card_to_move.moved();
                                         game_board[end_y as usize][end_x as usize] = Some(card_to_move);
                                         guard = out_1.lock().unwrap();
                                         let mut guard_2 = out_2.lock().unwrap();
-                                        if is_player_1_turn{
-                                            guard.write_packet(ServerMessage::MoveTroop(start_x, start_y, end_x, end_y));
-                                            guard_2.write_packet(ServerMessage::MoveTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
-                                        }
-                                        else{
-                                            guard.write_packet(ServerMessage::MoveTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
-                                            guard_2.write_packet(ServerMessage::MoveTroop(start_x, start_y, end_x, end_y));
-                                        }
+                                        guard.write_packet(ServerMessage::MoveTroop(start_x, start_y, end_x, end_y));
+                                        guard_2.write_packet(ServerMessage::MoveTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
                                         drop(guard);
                                         drop(guard_2);
                                     }
                                 },
-                                ClientMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
+                                ClientMessage::AttackTroop(mut start_x, mut start_y, mut end_x, mut end_y) => {
+                                    if !is_player_1_turn{
+                                       start_x = 4 - start_x;
+                                       start_y = 8 - start_y;
+                                       end_x = 4 - end_x;
+                                       end_y = 8 - end_y;
+                                    }
                                     let card_to_attack = game_board[start_y as usize][start_x as usize].clone();
                                         let where_to_attack = game_board[end_y as usize][end_x as usize].clone();
 
@@ -146,6 +155,7 @@ impl Game {
                                             is_player_1_turn == card_to_attack.is_owned_by_p1()
                                             && !card_to_attack.has_attacked()
                                             && where_to_attack.is_owned_by_p1() != is_player_1_turn
+                                            && card_to_attack.stun_count == 0
                                         {
                                             card_to_attack.attacked();
                                             card_to_attack.moved();
@@ -160,18 +170,12 @@ impl Game {
                                             }
                                             guard = out_1.lock().unwrap();
                                             let mut guard_2 = out_2.lock().unwrap();
-                                            if is_player_1_turn{
-                                                guard.write_packet(ServerMessage::AttackTroop(start_x, start_y, end_x, end_y));
-                                                guard_2.write_packet(ServerMessage::AttackTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
-                                            }else{
-                                                guard.write_packet(ServerMessage::AttackTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
-                                                guard_2.write_packet(ServerMessage::AttackTroop(start_x, start_y, end_x, end_y));
-                                            }
+                                            guard.write_packet(ServerMessage::AttackTroop(start_x, start_y, end_x, end_y));
+                                            guard_2.write_packet(ServerMessage::AttackTroop(4 - start_x, 8 - start_y, 4 - end_x, 8 - end_y));
                                             drop(guard);
                                             drop(guard_2);
                                         }
                                 },
-                                ClientMessage::Deck(_) => {},
                                 ClientMessage::EndTurn => {
                                     if is_player_1_turn {
                                         out_2.lock().unwrap().write_packet(ServerMessage::StartTurn);
@@ -179,6 +183,45 @@ impl Game {
                                         out_1.lock().unwrap().write_packet(ServerMessage::StartTurn);
                                     }
                                     is_player_1_turn = !is_player_1_turn;
+                                    for mut arr in &mut game_board {
+                                       for mut option in arr{
+                                           if option.is_some() {
+                                               option.as_mut().unwrap().reset();
+                                           }
+                                       }
+                                    }
+                                },
+                                ClientMessage::SpawnCard(card, mut x, mut y) => {
+                                    if x > 4 || x < 0 || y > 8 || y < 0 {return;}
+                                    if is_player_1_turn{
+                                        if player_1_pawns < 1 || player_1_spirits < card.get_cost() {
+                                            continue;
+                                        }
+                                    }
+                                    else{
+                                        if player_2_pawns < 1 || player_2_spirits < card.get_cost() {
+                                            continue;
+                                        }
+                                    }
+
+                                    if let Some(_) = game_board[y as usize][x as usize] {
+                                        continue;
+                                    }
+
+                                    let mut card_entity = CardEntity::new(&card, x, y, is_player_1_turn);
+                                    game_board[y as usize][x as usize] = Some(card_entity.clone());
+                                    if !is_player_1_turn {
+                                        player_2_pawns -= 1;
+                                        player_2_spirits -= card.get_cost();
+                                    }
+                                    else{
+                                        player_1_pawns -= 1;
+                                        player_1_spirits -= card.get_cost();
+                                    }
+                                    out_1.lock().unwrap().write_packet(ServerMessage::SpawnCard(card_entity.clone()));
+                                    card_entity.set_x_pos(to_p2_x!(x));
+                                    card_entity.set_y_pos(to_p2_y!(y));
+                                    out_2.lock().unwrap().write_packet(ServerMessage::SpawnCard(card_entity));
                                 },
                                 _ => {}
                             }

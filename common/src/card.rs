@@ -10,18 +10,11 @@ impl CardCollection {
         let mut map: HashMap<String, Card> = HashMap::new();
         map.insert(
             "skeleton".to_string(),
-            Card::new("skeleton", CardType::TROOP, 5., 5., 10, vec![]),
+            Card::new("skeleton", CardType::Troop, 5., 3., 2, vec![]),
         );
         map.insert(
-            "gold-mine".to_string(),
-            Card::new(
-                "gold-mine",
-                CardType::BUILDING,
-                20.,
-                0.,
-                35,
-                vec![CardAbility::ProduceGold(5)],
-            ),
+            "reaper".to_string(),
+            Card::new("reaper", CardType::Troop, 7., 5., 4, vec![]),
         );
         CardCollection(map)
     }
@@ -63,13 +56,17 @@ impl Card {
     pub fn get_name(&self) -> String {
         self.name.clone()
     }
+
+    pub fn get_cost(&self) -> i32 {
+        self.cost.clone()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 enum CardType {
-    TROOP,
-    SPELL,
-    BUILDING,
+    Troop,
+    Spell,
+    Building,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Component)]
@@ -81,6 +78,7 @@ pub struct CardEntity {
     is_owned_by_p1: bool,
     has_moved: bool,
     has_attacked: bool,
+    pub stun_count: i32,
 }
 
 impl CardEntity {
@@ -93,6 +91,7 @@ impl CardEntity {
             current_hp: card.hp,
             has_moved: false,
             has_attacked: false,
+            stun_count: 1,
         }
     }
 
@@ -138,6 +137,14 @@ impl CardEntity {
 
     pub fn get_card(&self) -> Card {
         self.card.clone()
+    }
+
+    pub fn reset(&mut self) {
+        self.has_moved = false;
+        self.has_attacked = false;
+        if self.stun_count > 0 {
+            self.stun_count -= 1;
+        }
     }
 }
 

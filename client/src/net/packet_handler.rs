@@ -1,5 +1,7 @@
 use super::{QueueIn, QueueOut};
 use crate::{
+    card_interactions::is_in_boundary,
+    currency::{Pawns, Spirits},
     tilemap::{CardSprites, TileSize},
     GameState, IsPlayer1, IsSelfTurn,
 };
@@ -27,6 +29,8 @@ fn handle_packets(
     mut card_entity_q: Query<(Entity, &mut CardEntity)>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
+    mut pawn_count: ResMut<Pawns>,
+    mut spirit_count: ResMut<Spirits>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
@@ -52,7 +56,7 @@ fn handle_packets(
                 sprite.custom_size = Some(Vec2::splat(tile_size.0 * 0.8));
 
                 commands
-                    .spawn_bundle(SpriteSheetBundle {
+                    .spawn(SpriteSheetBundle {
                         sprite,
                         texture_atlas: card_sprites.0.clone(),
                         transform: Transform::from_xyz(0., 0., 500.),
@@ -90,10 +94,20 @@ fn handle_packets(
                     commands.entity(attacked.0).despawn();
                     attacked.1.set_x_pos(end_x);
                     attacked.1.set_y_pos(end_y);
+                    if attacked.1.is_owned_by_p1() == is_player_1_res.0 {
+                        pawn_count.0 += 1;
+                    }
+                    if attacker.1.is_owned_by_p1() == is_player_1_res.0 {
+                        spirit_count.0 += attacked.1.get_card().get_cost() / 2;
+                    }
                 }
             }
             ServerMessage::StartTurn => {
                 is_self_turn.0 = true;
+                for (_, mut card_entity) in card_entity_q.iter_mut() {
+                    card_entity.reset();
+                }
+                spirit_count.0 += 1;
             }
             _ => {}
         }

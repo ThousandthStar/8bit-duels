@@ -1,3 +1,4 @@
+use crate::utils::screen_to_world_position;
 use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1, IsSelfTurn, MainCamera};
 use bevy::prelude::*;
 
@@ -7,10 +8,12 @@ pub(crate) struct CardInteractions;
 
 impl Plugin for CardInteractions {
     fn build(&self, app: &mut App) {
+        static CardSelectionStage: &str = "card_selection_stage";
         app.insert_resource(SelectedCardEntity(None))
             .insert_resource(ViewingCardEntity(None))
             .add_system_set(
-                SystemSet::on_update(GameState::Playing).with_system(card_selecting_system),
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(card_selecting_system.after(card_interactions_system)),
             )
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(setting_indicators_system),
@@ -60,6 +63,14 @@ fn card_selecting_system(
                     }
                 }
                 None => {
+                    if let Some(viewing_card) = viewing_card_entity.0.clone() {
+                        if viewing_card.get_x_pos() == card_entity.get_x_pos()
+                            && viewing_card.get_y_pos() == card_entity.get_y_pos()
+                        {
+                            viewing_card_entity.0 = None;
+                            return;
+                        }
+                    }
                     if card_entity.is_owned_by_p1() == is_player_1.0 {
                         selected_card_entity.0 = Some(card_entity.clone());
                     }
@@ -86,8 +97,14 @@ fn setting_indicators_system(
 ) {
     if selected_card_entity.0.is_some() {
         let selected_card_entity = selected_card_entity.0.clone().unwrap();
+        if selected_card_entity.stun_count > 0 {
+            return;
+        }
 
         for (move_indicator, mut visibility) in move_indicator_q.iter_mut() {
+            if selected_card_entity.has_moved() || selected_card_entity.has_attacked() {
+                break;
+            }
             if Vec2::new(move_indicator.0 as f32, move_indicator.1 as f32).distance(Vec2::new(
                 selected_card_entity.get_x_pos() as f32,
                 selected_card_entity.get_y_pos() as f32,
@@ -102,11 +119,7 @@ fn setting_indicators_system(
                         break;
                     }
                 }
-                if available
-                    && is_self_turn.0
-                    && !selected_card_entity.has_moved()
-                    && !selected_card_entity.has_attacked()
-                {
+                if available && is_self_turn.0 {
                     visibility.is_visible = true;
                 }
             } else {
@@ -115,10 +128,13 @@ fn setting_indicators_system(
         }
 
         for (mut attack_indicator, mut visibility) in attack_indicator_q.iter_mut() {
+            if selected_card_entity.has_attacked() {
+                break;
+            }
             if Vec2::new(attack_indicator.0 as f32, attack_indicator.1 as f32).distance(Vec2::new(
                 selected_card_entity.get_x_pos() as f32,
                 selected_card_entity.get_y_pos() as f32,
-            )) < 15.
+            )) < 1.5
             {
                 let mut available = false;
                 for card_entity in card_entity_q.iter() {
@@ -171,7 +187,7 @@ fn card_interactions_system(
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
     cam_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    is_self_turn: Res<IsSelfTurn>,
+    mut card_entity_q: Query<&mut CardEntity, (Without<MoveIndicator>, Without<AttackIndicator>)>,
 ) {
     if selected_card_entity.0.is_none() {
         return;
@@ -181,9 +197,17 @@ fn card_interactions_system(
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
             if visibility.is_visible {
                 let mut queue_out_guard = queue_out.0.lock().unwrap();
+                let acting_entity = selected_card_entity.0.clone().unwrap();
+                for mut card_entity in card_entity_q.iter_mut() {
+                    if card_entity.get_x_pos() == acting_entity.get_x_pos()
+                        && card_entity.get_y_pos() == acting_entity.get_y_pos()
+                    {
+                        card_entity.moved();
+                    }
+                }
                 queue_out_guard.push_back(ClientMessage::MoveTroop(
-                    selected_card_entity.0.clone().unwrap().get_x_pos(),
-                    selected_card_entity.0.clone().unwrap().get_y_pos(),
+                    acting_entity.get_x_pos(),
+                    acting_entity.get_y_pos(),
                     move_indicator.0,
                     move_indicator.1,
                 ));
@@ -197,9 +221,18 @@ fn card_interactions_system(
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
             if visibility.is_visible {
                 let mut queue_out_guard = queue_out.0.lock().unwrap();
+                let acting_entity = selected_card_entity.0.clone().unwrap();
+                for mut card_entity in card_entity_q.iter_mut() {
+                    if card_entity.get_x_pos() == acting_entity.get_x_pos()
+                        && card_entity.get_y_pos() == acting_entity.get_y_pos()
+                    {
+                        card_entity.attacked();
+                        card_entity.moved();
+                    }
+                }
                 queue_out_guard.push_back(ClientMessage::AttackTroop(
-                    selected_card_entity.0.clone().unwrap().get_x_pos(),
-                    selected_card_entity.0.clone().unwrap().get_y_pos(),
+                    acting_entity.get_x_pos(),
+                    acting_entity.get_y_pos(),
                     attack_indicator.0,
                     attack_indicator.1,
                 ));
@@ -252,29 +285,4 @@ pub(crate) fn is_in_boundary(bound_1: Vec2, bound_2: Vec2, position: Vec2) -> bo
         return true;
     }
     return false;
-}
-
-pub(crate) fn screen_to_world_position(
-    screen_pos: Vec2,
-    camera: &Camera,
-    camera_transform: &GlobalTransform,
-    window: &Window,
-) -> Vec2 {
-    //***********************************************************************/
-    //Found on the unofficial Bevy cheat book (https://bevy-cheatbook.github.io/cookbook/cursor2world.html)
-    let window_size = Vec2::new(window.width() as f32, window.height() as f32);
-
-    // convert screen position [0..resolution] to ndc [-1..1] (gpu coordinates)
-    let ndc = (screen_pos / window_size) * 2.0 - Vec2::ONE;
-
-    // matrix for undoing the projection and camera transform
-    let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix().inverse();
-
-    // use it to convert ndc to world-space coordinates
-    let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
-
-    // reduce it to a 2D value
-    let world_pos: Vec2 = world_pos.truncate();
-    //***********************************************************************/
-    return world_pos;
 }
