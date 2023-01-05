@@ -16,6 +16,7 @@ pub enum ServerMessage {
     */
     MoveTroop(i32, i32, i32, i32),
     AttackTroop(i32, i32, i32, i32),
+    EndGame(bool),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,4 +26,5 @@ pub enum ClientMessage {
     AttackTroop(i32, i32, i32, i32),
     SpawnCard(Card, i32, i32),
     EndTurn,
+    WinGame(i32, i32),
 }

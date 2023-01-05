@@ -8,7 +8,6 @@ pub(crate) struct CardInteractions;
 
 impl Plugin for CardInteractions {
     fn build(&self, app: &mut App) {
-        static CardSelectionStage: &str = "card_selection_stage";
         app.insert_resource(SelectedCardEntity(None))
             .insert_resource(ViewingCardEntity(None))
             .add_system_set(
@@ -226,7 +225,6 @@ fn card_interactions_system(
                     if card_entity.get_x_pos() == acting_entity.get_x_pos()
                         && card_entity.get_y_pos() == acting_entity.get_y_pos()
                     {
-                        card_entity.attacked();
                         card_entity.moved();
                     }
                 }

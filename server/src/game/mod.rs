@@ -7,7 +7,7 @@ use crate::to_p2_x;
 use crate::to_p2_y;
 use crate::utils::{self, WritePacket};
 
-use common::card::{Card, CardCollection, CardEntity};
+use common::card::{Card, CardAbility, CardCollection, CardEntity};
 use common::messages::{ClientMessage, ServerMessage};
 
 use log::{info, warn};
@@ -94,14 +94,17 @@ impl Game {
                     let mut queue_guard;
                     if is_player_1_turn{
                         queue_guard = queue_1.lock().unwrap();
-                        player_1_spirits += 1;
                     }
                     else{
                         queue_guard = queue_2.lock().unwrap();
-                        player_2_spirits += 1;
                     }
 
                         if let Some(message) = queue_guard.pop_front() {
+                            if is_player_1_turn {
+                                player_1_spirits += 1;
+                            }else{
+                                player_2_spirits += 1;
+                            }
                             match message {
                                 ClientMessage::MoveTroop(mut start_x, mut start_y, mut end_x, mut end_y) => {
                                     if !is_player_1_turn{
@@ -157,12 +160,32 @@ impl Game {
                                             && where_to_attack.is_owned_by_p1() != is_player_1_turn
                                             && card_to_attack.stun_count == 0
                                         {
-                                            card_to_attack.attacked();
                                             card_to_attack.moved();
+                                            let card_binding = card_to_attack.get_card();
+                                            let abilities = card_binding.get_abilities();
+                                            for ability in &abilities {
+                                                if let CardAbility::Stun { amount } = ability {
+                                                    where_to_attack.stun_count += amount;
+                                                }
+                                            }
+                                            card_to_attack.attacked();
+
                                             where_to_attack.current_hp -= card_to_attack.get_card().get_damage();
                                             if where_to_attack.current_hp <= 0. {
                                                 game_board[start_y as usize][start_x as usize] = None;
-                                                game_board[end_y as usize][end_x as usize] = Some(card_to_attack);
+                                                game_board[end_y as usize][end_x as usize] = Some(card_to_attack.clone());
+                                                let spirits_to_add = if abilities.contains(&CardAbility::SpiritCollector) {
+                                                    where_to_attack.get_card().get_cost()
+                                                } else {
+                                                    where_to_attack.get_card().get_cost() / 2
+                                                };
+                                                if card_to_attack.is_owned_by_p1() {
+                                                    player_1_spirits += spirits_to_add;
+                                                    player_2_pawns += 1;
+                                                } else{
+                                                    player_2_spirits += spirits_to_add;
+                                                    player_1_pawns += 1;
+                                                }
                                             }
                                             else{
                                                 game_board[start_y as usize][start_x as usize] = Some(card_to_attack);
@@ -223,6 +246,20 @@ impl Game {
                                     card_entity.set_y_pos(to_p2_y!(y));
                                     out_2.lock().unwrap().write_packet(ServerMessage::SpawnCard(card_entity));
                                 },
+                                ClientMessage::WinGame(x, y) => {
+                                    if let Some(card_entity) = &game_board[y as usize][x as usize] {
+                                        if card_entity.is_owned_by_p1() == is_player_1_turn{
+                                            if is_player_1_turn && card_entity.get_y_pos() == 0 && !card_entity.stun_count > 0 && !card_entity.has_moved(){
+                                                out_1.lock().unwrap().write_packet(ServerMessage::EndGame(true));
+                                                out_2.lock().unwrap().write_packet(ServerMessage::EndGame(false));
+                                            }
+                                            else if card_entity.get_y_pos() == 8 && !card_entity.stun_count > 0 && !card_entity.has_moved(){
+                                                out_1.lock().unwrap().write_packet(ServerMessage::EndGame(false));
+                                                out_2.lock().unwrap().write_packet(ServerMessage::EndGame(true));
+                                            }
+                                        }
+                                    }
+                                }
                                 _ => {}
                             }
                         }

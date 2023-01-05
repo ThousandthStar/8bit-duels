@@ -14,7 +14,39 @@ impl CardCollection {
         );
         map.insert(
             "reaper".to_string(),
-            Card::new("reaper", CardType::Troop, 7., 5., 4, vec![]),
+            Card::new(
+                "reaper",
+                CardType::Troop,
+                6.,
+                4.,
+                5,
+                vec![CardAbility::SpiritCollector],
+            ),
+        );
+        map.insert(
+            "kraken".to_string(),
+            Card::new(
+                "kraken",
+                CardType::Troop,
+                12.,
+                1.,
+                5,
+                vec![CardAbility::MultiAttack {
+                    max_attacks: 2_u8,
+                    attack_count: 0_u8,
+                }],
+            ),
+        );
+        map.insert(
+            "spider".to_string(),
+            Card::new(
+                "spider",
+                CardType::Troop,
+                4.,
+                2.,
+                4,
+                vec![CardAbility::Stun { amount: 2 }],
+            ),
         );
         CardCollection(map)
     }
@@ -48,7 +80,6 @@ impl Card {
             abilities,
         }
     }
-
     pub fn get_damage(&self) -> f32 {
         self.attack.clone()
     }
@@ -59,6 +90,14 @@ impl Card {
 
     pub fn get_cost(&self) -> i32 {
         self.cost.clone()
+    }
+
+    pub fn get_abilities(&self) -> Vec<CardAbility> {
+        self.abilities.clone()
+    }
+
+    pub fn get_abilities_mut(&mut self) -> &mut Vec<CardAbility> {
+        &mut self.abilities
     }
 }
 
@@ -132,6 +171,19 @@ impl CardEntity {
     }
 
     pub fn attacked(&mut self) {
+        let mut card = &mut self.card;
+        for ability in card.get_abilities_mut() {
+            if let CardAbility::MultiAttack {
+                ref mut max_attacks,
+                ref mut attack_count,
+            } = ability
+            {
+                if attack_count < max_attacks {
+                    *attack_count += 1;
+                    return;
+                }
+            }
+        }
         self.has_attacked = true;
     }
 
@@ -145,10 +197,22 @@ impl CardEntity {
         if self.stun_count > 0 {
             self.stun_count -= 1;
         }
+        let mut card = &mut self.card;
+        for ability in card.get_abilities_mut() {
+            if let CardAbility::MultiAttack {
+                max_attacks: _,
+                ref mut attack_count,
+            } = ability
+            {
+                *attack_count = 0_u8;
+            }
+        }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-enum CardAbility {
-    ProduceGold(i32),
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum CardAbility {
+    MultiAttack { max_attacks: u8, attack_count: u8 },
+    SpiritCollector,
+    Stun { amount: i32 },
 }

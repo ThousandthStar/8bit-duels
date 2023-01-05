@@ -1,16 +1,15 @@
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use common::card::CardCollection;
 use currency::CurrencyPlugin;
-use std::{
-    io::{Read, Write},
-    net::TcpStream,
-};
+use serde::{Deserialize, Serialize};
+use serde_json;
+use std::fs;
 
 pub mod card_interactions;
 pub mod currency;
 pub mod net;
+pub mod stun_indicator;
 pub mod tilemap;
 pub mod ui;
 pub mod utils;
@@ -18,6 +17,7 @@ pub mod utils;
 use card_interactions::CardInteractions;
 use common::card::Card;
 use net::packet_handler::PacketHandlerPlugin;
+use stun_indicator::StunIndicatorPlugin;
 use tilemap::TilemapPlugin;
 use ui::UiPlugin;
 
@@ -25,6 +25,9 @@ use ui::UiPlugin;
 pub enum GameState {
     Waiting,
     PreparingForGame,
+    Settings,
+    DeckBuilding,
+    MainMenu,
     Playing,
 }
 
@@ -48,9 +51,9 @@ pub fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     window: WindowDescriptor {
-                        width: 750.0,
-                        height: 450.0,
-                        title: "Multiplayer Game".to_string(),
+                        width: 300.0 * 4.0,
+                        height: 180.0 * 4.0,
+                        title: "8bit Duels".to_string(),
                         present_mode: PresentMode::Fifo,
                         resizable: false,
                         ..Default::default()
@@ -65,6 +68,7 @@ pub fn main() {
         .add_plugin(PacketHandlerPlugin)
         .add_plugin(CardInteractions)
         .add_plugin(CurrencyPlugin)
+        .add_plugin(StunIndicatorPlugin)
         .add_startup_system(spawn_camera)
         .add_state(GameState::Waiting)
         .run();

@@ -6,7 +6,10 @@ use crate::{
     GameState, IsPlayer1, IsSelfTurn,
 };
 use bevy::prelude::*;
-use common::{card::CardEntity, messages::ServerMessage};
+use common::{
+    card::{CardAbility, CardEntity},
+    messages::ServerMessage,
+};
 
 pub(crate) struct PacketHandlerPlugin;
 
@@ -59,7 +62,7 @@ fn handle_packets(
                     .spawn(SpriteSheetBundle {
                         sprite,
                         texture_atlas: card_sprites.0.clone(),
-                        transform: Transform::from_xyz(0., 0., 500.),
+                        transform: Transform::from_xyz(1000000000.0, 1000000000.0, 500.),
                         ..Default::default()
                     })
                     .insert(card_entity);
@@ -90,24 +93,40 @@ fn handle_packets(
                 let mut attacker = attacker.unwrap();
                 let mut attacked = attacked.unwrap();
                 attacked.1.current_hp -= attacker.1.get_card().get_damage();
+                attacker.1.attacked();
+                let abilities = attacker.1.get_card().get_abilities();
+                for ability in &abilities {
+                    if let CardAbility::Stun { amount } = ability {
+                        attacked.1.stun_count += amount;
+                    }
+                }
                 if attacked.1.current_hp <= 0. {
                     commands.entity(attacked.0).despawn();
-                    attacked.1.set_x_pos(end_x);
-                    attacked.1.set_y_pos(end_y);
+                    attacker.1.set_x_pos(end_x);
+                    attacker.1.set_y_pos(end_y);
                     if attacked.1.is_owned_by_p1() == is_player_1_res.0 {
                         pawn_count.0 += 1;
                     }
                     if attacker.1.is_owned_by_p1() == is_player_1_res.0 {
-                        spirit_count.0 += attacked.1.get_card().get_cost() / 2;
+                        if abilities.contains(&CardAbility::SpiritCollector) {
+                            spirit_count.0 += attacked.1.get_card().get_cost();
+                        } else {
+                            spirit_count.0 += attacked.1.get_card().get_cost() / 2;
+                        }
                     }
                 }
             }
             ServerMessage::StartTurn => {
                 is_self_turn.0 = true;
                 for (_, mut card_entity) in card_entity_q.iter_mut() {
-                    card_entity.reset();
+                    if card_entity.is_owned_by_p1() == is_player_1_res.0 {
+                        card_entity.reset();
+                    }
                 }
                 spirit_count.0 += 1;
+            }
+            ServerMessage::EndGame(won) => {
+                state.set(GameState::Waiting);
             }
             _ => {}
         }

@@ -11,7 +11,7 @@ pub struct TilemapPlugin;
 
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_tilemap_bg)
+        app.add_startup_system(spawn_tiles)
             .add_startup_system_to_stage(StartupStage::PreStartup, add_tile_size_res)
             .add_system(position_sprites)
             .add_system(load_card_sprites);
@@ -35,12 +35,14 @@ fn load_card_sprites(
 ) {
     let sprite_sheet = asset_server.load("sprite_sheet.png");
     let atlas: TextureAtlas =
-        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(32.0), 1, 2, None, None);
+        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(32.0), 1, 4, None, None);
 
     let atlas_handle = texture_atlases.add(atlas);
     let mut card_sprite_map = HashMap::new();
-    card_sprite_map.insert("skeleton".to_string(), 0);
-    card_sprite_map.insert("reaper".to_string(), 1);
+    card_sprite_map.insert("reaper".to_string(), 0);
+    card_sprite_map.insert("skeleton".to_string(), 1);
+    card_sprite_map.insert("kraken".to_string(), 2);
+    card_sprite_map.insert("spider".to_string(), 3);
 
     commands.insert_resource(CardSprites(atlas_handle, card_sprite_map));
 }
@@ -62,7 +64,7 @@ fn position_sprites(
     }
 }
 
-fn spawn_tilemap_bg(
+fn spawn_tiles(
     mut commands: Commands,
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
@@ -100,9 +102,9 @@ fn spawn_tilemap_bg(
                             200.,
                         ),
                         sprite: Sprite {
-                            color: Color::rgba(0.8, 0.8, 0.8, 0.62),
-                            custom_size: Some(Vec2::splat(tile_size.0 * 0.8)),
-
+                            custom_size: Some(Vec2::splat(
+                                tile_size.0 * if l == 1 { 0.80 } else { 1.0 },
+                            )),
                             ..Default::default()
                         },
                         visibility: Visibility { is_visible: false },
