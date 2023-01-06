@@ -3,6 +3,7 @@ mod net;
 mod utils;
 
 use std::{
+    env,
     fmt::format,
     io::{BufReader, Write},
     net::{TcpListener, TcpStream},
@@ -18,9 +19,15 @@ use simple_logger::SimpleLogger;
 fn main() {
     SimpleLogger::new().init().unwrap();
     const port: i32 = 1000;
-    let card_collection = CardCollection::new();
+    let args: Vec<String> = env::args().collect();
+    let mut address: &str = "0.0.0.0";
+    if let Some(arg) = args.get(0) {
+        if *arg == "dev".to_owned() {
+            address = "127.0.0.1";
+        }
+    }
     let listener: TcpListener =
-        TcpListener::bind(format!("127.0.0.1:{}", port)).expect("Couldn't bind port");
+        TcpListener::bind(format!("{}:{}", address, port)).expect("Couldn't bind port");
     let mut pending: Option<Client> = None;
     info!("server started");
     loop {
