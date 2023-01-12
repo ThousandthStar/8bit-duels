@@ -3,6 +3,7 @@ use crate::{
     card_interactions::is_in_boundary,
     currency::{Pawns, Spirits},
     tilemap::{CardSprites, TileSize},
+    ui::in_game_ui::ChatMessages,
     GameState, IsPlayer1, IsSelfTurn,
 };
 use bevy::prelude::*;
@@ -24,16 +25,17 @@ impl Plugin for PacketHandlerPlugin {
 
 fn handle_packets(
     mut queue_in: ResMut<QueueIn>,
-    mut queue_out: ResMut<QueueOut>,
     mut commands: Commands,
     mut state: ResMut<State<GameState>>,
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
     mut card_entity_q: Query<(Entity, &mut CardEntity)>,
+    mut visible_q: Query<&mut Visibility, Without<CardEntity>>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
     mut pawn_count: ResMut<Pawns>,
     mut spirit_count: ResMut<Spirits>,
+    mut chat_messages: ResMut<ChatMessages>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
@@ -126,7 +128,16 @@ fn handle_packets(
                 spirit_count.0 += 1;
             }
             ServerMessage::EndGame(won) => {
+                for (entity, _) in card_entity_q.iter() {
+                    commands.entity(entity).despawn();
+                }
+                for mut visibility in visible_q.iter_mut() {
+                    visibility.is_visible = false;
+                }
                 state.set(GameState::Waiting);
+            }
+            ServerMessage::ChatMessage(message) => {
+                chat_messages.0.push(message);
             }
             _ => {}
         }

@@ -18,8 +18,8 @@ pub(crate) struct QueueIn(pub(crate) Arc<Mutex<VecDeque<ServerMessage>>>);
 #[derive(Resource)]
 pub(crate) struct QueueOut(pub(crate) Arc<Mutex<VecDeque<ClientMessage>>>);
 
-pub(crate) fn init(commands: &mut Commands) {
-    if let Ok(stream) = TcpStream::connect("172.105.19.35:1000") {
+pub(crate) fn init(commands: &mut Commands, server_address: &str) {
+    if let Ok(stream) = TcpStream::connect(server_address) {
         let queue_in: VecDeque<ServerMessage> = VecDeque::new();
         let queue_out: VecDeque<ClientMessage> = VecDeque::new();
 

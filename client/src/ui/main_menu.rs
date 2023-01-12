@@ -1,4 +1,5 @@
 use crate::net::QueueOut;
+use crate::tilemap::Tile;
 use crate::{Deck, GameState};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
@@ -12,6 +13,12 @@ impl Plugin for MainMenuUiPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(GameState::PreparingForGame).with_system(main_menu),
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::PreparingForGame).with_system(super::build_ui),
+        )
+        .add_system_set(
+            SystemSet::on_exit(GameState::PreparingForGame).with_system(super::destroy_ui),
         )
         .insert_resource(DeckSelection::default());
     }
@@ -112,7 +119,7 @@ fn main_menu(
                 deck.push(card.clone());
             }
             let mut mutex_guard = queue_out.0.lock().unwrap();
-            mutex_guard.push_back(ClientMessage::Deck(deck.clone()));
+            mutex_guard.push_back(ClientMessage::PlayerInfo("player".to_owned(), deck.clone()));
             commands.insert_resource(Deck(deck));
         }
     });

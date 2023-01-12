@@ -17,14 +17,16 @@ pub enum ServerMessage {
     MoveTroop(i32, i32, i32, i32),
     AttackTroop(i32, i32, i32, i32),
     EndGame(bool),
+    ChatMessage(String),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ClientMessage {
-    Deck(Vec<Card>),
+    PlayerInfo(String, Vec<Card>),
     MoveTroop(i32, i32, i32, i32),
     AttackTroop(i32, i32, i32, i32),
     SpawnCard(Card, i32, i32),
     EndTurn,
     WinGame(i32, i32),
+    ChatMessage(String),
 }

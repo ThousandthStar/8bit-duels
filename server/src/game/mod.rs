@@ -1,11 +1,10 @@
 use std::thread;
 
-use serde_json::Value;
-
 use crate::net::client::Client;
 use crate::to_p2_x;
 use crate::to_p2_y;
 use crate::utils::{self, WritePacket};
+use rustrict::CensorStr;
 
 use common::card::{Card, CardAbility, CardCollection, CardEntity};
 use common::messages::{ClientMessage, ServerMessage};
@@ -44,6 +43,8 @@ impl Game {
         let out_2 = self.client_2.get_stream();
         let cards = CardCollection::new();
         let game_board = self.game_board.clone();
+        let mut p1_username = "".to_owned();
+        let mut p2_username = "".to_owned();
         thread::spawn(
             closure::closure!(move queue_1, move queue_2, move cards, move mut game_board, ||{
                 let mut deck_1: Option<Vec<Card>> = None;
@@ -65,11 +66,13 @@ impl Game {
                     }
                     if let Some(message) = guard.pop_front(){
                         match message {
-                            ClientMessage::Deck(deck) => {
+                            ClientMessage::PlayerInfo(username, deck) => {
                                 if player_1{
+                                    p1_username = username;
                                     deck_1 = Some(deck);
                                 }
                                 else{
+                                    p2_username = username;
                                     deck_2 = Some(deck);
                                     break;
                                 }
@@ -90,21 +93,41 @@ impl Game {
                 let mut is_player_1_turn = true;
 
                 info!("starting game");
-                loop{
+                'game_loop: loop{
                     let mut queue_guard;
+                    let mut queue_guard_2;
                     if is_player_1_turn{
                         queue_guard = queue_1.lock().unwrap();
+                        queue_guard_2 = queue_2.lock().unwrap();
                     }
                     else{
                         queue_guard = queue_2.lock().unwrap();
+                        queue_guard_2 = queue_1.lock().unwrap();
                     }
-
+                    let mut index_list: Vec<usize> = Vec::new();
+                    for (index, packet) in queue_guard_2.iter().enumerate() {
+                        if let ClientMessage::ChatMessage(message) = packet {
+                            if message.len() > 30{
+                                continue;
+                            }
+                            let message = &message.censor();
+                            let final_message = if is_player_1_turn { p2_username.clone() } else { p1_username.clone() } + ": " + &message;
+                            out_1.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message.clone()));
+                            out_2.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message));
+                            index_list.push(index);
+                        }
+                    }
+                    for index in &index_list {
+                        queue_guard_2.remove(*index);
+                    }
+                    drop(queue_guard_2);
                         if let Some(message) = queue_guard.pop_front() {
                             if is_player_1_turn {
                                 player_1_spirits += 1;
                             }else{
                                 player_2_spirits += 1;
                             }
+                            drop(queue_guard);
                             match message {
                                 ClientMessage::MoveTroop(mut start_x, mut start_y, mut end_x, mut end_y) => {
                                     if !is_player_1_turn{
@@ -249,16 +272,28 @@ impl Game {
                                 ClientMessage::WinGame(x, y) => {
                                     if let Some(card_entity) = &game_board[y as usize][x as usize] {
                                         if card_entity.is_owned_by_p1() == is_player_1_turn{
-                                            if is_player_1_turn && card_entity.get_y_pos() == 0 && !card_entity.stun_count > 0 && !card_entity.has_moved(){
+                                            if is_player_1_turn && !(card_entity.stun_count > 0) && !card_entity.has_moved(){
                                                 out_1.lock().unwrap().write_packet(ServerMessage::EndGame(true));
                                                 out_2.lock().unwrap().write_packet(ServerMessage::EndGame(false));
-                                            }
-                                            else if card_entity.get_y_pos() == 8 && !card_entity.stun_count > 0 && !card_entity.has_moved(){
-                                                out_1.lock().unwrap().write_packet(ServerMessage::EndGame(false));
-                                                out_2.lock().unwrap().write_packet(ServerMessage::EndGame(true));
+                                                break 'game_loop;
                                             }
                                         }
+                                            else if !(card_entity.stun_count > 0) && !card_entity.has_moved(){
+                                                out_1.lock().unwrap().write_packet(ServerMessage::EndGame(false));
+                                                out_2.lock().unwrap().write_packet(ServerMessage::EndGame(true));
+                                                break 'game_loop;
+                                            }
+
                                     }
+                                }
+                                ClientMessage::ChatMessage(message) => {
+                                    if message.len() > 30{
+                                        continue;
+                                    }
+                                    let message = &message.censor();
+                                    let final_message = if is_player_1_turn { p2_username.clone() } else { p1_username.clone() } + ": " + &message;
+                                    out_1.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message.clone()));
+                                    out_2.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message));
                                 }
                                 _ => {}
                             }

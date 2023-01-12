@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::card_interactions::{AttackIndicator, MoveIndicator};
+use crate::{
+    card_interactions::{AttackIndicator, MoveIndicator},
+    ownership_indicator::{OpponentOwned, SelfOwned},
+    IsPlayer1,
+};
 use common::card::CardEntity;
 use std::collections::HashMap;
 
@@ -48,21 +52,57 @@ fn load_card_sprites(
 }
 
 fn position_sprites(
-    mut query: Query<(&mut Transform, &CardEntity)>,
+    mut query: Query<(&mut Transform, &CardEntity), (Without<SelfOwned>, Without<OpponentOwned>)>,
+    mut self_ownership_q: Query<
+        (&mut Transform, &mut Visibility),
+        (With<SelfOwned>, Without<OpponentOwned>),
+    >,
+    mut opponent_ownership_q: Query<
+        (&mut Transform, &mut Visibility),
+        (With<OpponentOwned>, Without<SelfOwned>),
+    >,
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
+    is_player_1: Res<IsPlayer1>,
 ) {
     let window = windows.get_primary().unwrap();
     // parentheses only for clarity (they are unnecessary)
     let start_y = (window.height() / 2.) - (tile_size.0 / 2.);
     let start_x = (-window.width() / 2.) + (tile_size.0 / 2.) + (window.width() / 3.);
 
+    let mut self_ownership_list: Vec<(Mut<Transform>, Mut<Visibility>)> =
+        self_ownership_q.iter_mut().collect();
+    let mut opponent_ownership_list: Vec<(Mut<Transform>, Mut<Visibility>)> =
+        opponent_ownership_q.iter_mut().collect();
+
     for (mut transform, card_entity) in query.iter_mut() {
         transform.translation.x = start_x + (card_entity.get_x_pos() as f32 * tile_size.0);
         transform.translation.y = start_y - (card_entity.get_y_pos() as f32 * tile_size.0);
-        transform.translation.z = 150.;
+        transform.translation.z = 500.;
+        if card_entity.is_owned_by_p1() == is_player_1.0 {
+            let (mut indicator_transform, mut visibility) = self_ownership_list.pop().unwrap();
+            indicator_transform.translation = transform.translation;
+            indicator_transform.translation.z = 400.0;
+            visibility.is_visible = true;
+        } else {
+            let (mut indicator_transform, mut visibility) = opponent_ownership_list.pop().unwrap();
+            indicator_transform.translation = transform.translation;
+            indicator_transform.translation.z = 400.0;
+            visibility.is_visible = true;
+        }
+    }
+    for tuple in self_ownership_list.iter_mut() {
+        let visibility = &mut tuple.1;
+        visibility.is_visible = false;
+    }
+    for tuple in opponent_ownership_list.iter_mut() {
+        let visibility = &mut tuple.1;
+        visibility.is_visible = false;
     }
 }
+
+#[derive(Component)]
+pub struct Tile;
 
 fn spawn_tiles(
     mut commands: Commands,
@@ -76,30 +116,32 @@ fn spawn_tiles(
     let start_x = (-window.width() / 2.) + (tile_size.0 / 2.);
     for i in 0..5 {
         for j in 0..9 {
-            commands.spawn_bundle(SpriteBundle {
-                transform: Transform::from_xyz(
-                    start_x + one_third_window + (i as f32 * tile_size.0),
-                    start_y - (j as f32 * tile_size.0),
-                    100.,
-                ),
-                sprite: Sprite {
-                    custom_size: Some(Vec2::splat(tile_size.0)),
-                    color: if (i + (j * 5)) % 2 == 0 {
-                        Color::hex("ffa19e").unwrap()
-                    } else {
-                        Color::hex("9eb5c0").unwrap()
+            commands
+                .spawn_bundle(SpriteBundle {
+                    transform: Transform::from_xyz(
+                        start_x + one_third_window + (i as f32 * tile_size.0),
+                        start_y - (j as f32 * tile_size.0),
+                        0.,
+                    ),
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::splat(tile_size.0)),
+                        color: if (i + (j * 5)) % 2 == 0 {
+                            Color::hex("f2f2f2").unwrap()
+                        } else {
+                            Color::hex("ffffff").unwrap()
+                        },
+                        ..Default::default()
                     },
                     ..Default::default()
-                },
-                ..Default::default()
-            });
+                })
+                .insert(Tile);
             for l in 0..2 {
                 let spawned_entity = commands
                     .spawn_bundle(SpriteBundle {
                         transform: Transform::from_xyz(
                             start_x + one_third_window + (i as f32 * tile_size.0),
                             start_y - (j as f32 * tile_size.0),
-                            200.,
+                            250.,
                         ),
                         sprite: Sprite {
                             custom_size: Some(Vec2::splat(

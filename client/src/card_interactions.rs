@@ -19,8 +19,30 @@ impl Plugin for CardInteractions {
             )
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(card_interactions_system),
-            );
+            )
+            .add_startup_system(spawn_select_indicator);
     }
+}
+
+#[derive(Component)]
+pub struct SelectIndicator;
+
+fn spawn_select_indicator(
+    mut commands: Commands,
+    tile_size: Res<TileSize>,
+    asset_server: Res<AssetServer>,
+) {
+    commands
+        .spawn(SpriteBundle {
+            transform: Transform::from_xyz(10000000000.0, 0.0, 450.0),
+            sprite: Sprite {
+                custom_size: Some(Vec2::splat(tile_size.0)),
+                ..Default::default()
+            },
+            texture: asset_server.load("select_indicator.png"),
+            ..Default::default()
+        })
+        .insert(SelectIndicator);
 }
 
 // components to flag movement and attack indicators
@@ -42,6 +64,14 @@ fn card_selecting_system(
     mut card_entity_q: Query<(&Transform, &mut CardEntity), Without<MainCamera>>,
     mut selected_card_entity: ResMut<SelectedCardEntity>,
     mut viewing_card_entity: ResMut<ViewingCardEntity>,
+    mut select_indicator_q: Query<
+        (&mut Transform, &mut Visibility),
+        (
+            With<SelectIndicator>,
+            Without<MainCamera>,
+            Without<CardEntity>,
+        ),
+    >,
 ) {
     for (transform, mut card_entity) in card_entity_q.iter_mut() {
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
@@ -75,6 +105,17 @@ fn card_selecting_system(
                     }
                     viewing_card_entity.0 = Some(card_entity.clone());
                 }
+            }
+        }
+    }
+    if let Some(selected_card_entity) = &viewing_card_entity.0 {
+        let (mut transform, mut visibility) = select_indicator_q.single_mut();
+        visibility.is_visible = false;
+        for (card_transform, card_entity) in card_entity_q.iter() {
+            if card_entity == selected_card_entity {
+                transform.translation.x = card_transform.translation.x;
+                transform.translation.y = card_transform.translation.y;
+                visibility.is_visible = true;
             }
         }
     }

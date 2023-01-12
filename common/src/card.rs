@@ -52,7 +52,7 @@ impl CardCollection {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Card {
     pub name: String,
     type_: CardType,
@@ -101,14 +101,14 @@ impl Card {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 enum CardType {
     Troop,
     Spell,
     Building,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Component)]
+#[derive(Serialize, Deserialize, Clone, Debug, Component, PartialEq)]
 pub struct CardEntity {
     card: Card,
     pub current_hp: f32,

@@ -25,7 +25,7 @@ fn spawn_stun_indicators(
     for _ in 0..12 {
         commands
             .spawn_bundle(SpriteBundle {
-                transform: Transform::from_xyz(0.0, 0.0, 200.0),
+                transform: Transform::from_xyz(0.0, 0.0, 425.0),
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(tile_size.0)),
                     ..Default::default()
@@ -48,6 +48,7 @@ fn show_stun_indicator(
         if card_entity.stun_count > 0 {
             let mut stun_indicator_tuple = stun_indicator_list.pop().unwrap();
             stun_indicator_tuple.0.translation = transform.translation.clone();
+            stun_indicator_tuple.0.translation.z = 425.0;
             stun_indicator_tuple.1.is_visible = true;
         }
     });
