@@ -10,6 +10,7 @@ def launch():
     except Exception:
         label.configure(text="Downloading failed, defaulting to running")
         os.chdir(os.path.join("8bit-duels", "client"))
+        os.system("git pull")
         os.system("cargo run")
 
 
