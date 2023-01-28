@@ -52,8 +52,8 @@ impl Game {
                 let mut player_1: bool = true;
                 let mut player_1_pawns: i32 = 6;
                 let mut player_2_pawns: i32 = 6;
-                let mut player_1_spirits: i32 = 100;
-                let mut player_2_spirits: i32 = 100;
+                let mut player_1_spirits: i32 = 8;
+                let mut player_2_spirits: i32 = 8;
                 // first check to get player decks
                 loop{
                     let mut guard;

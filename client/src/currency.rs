@@ -10,6 +10,6 @@ pub struct CurrencyPlugin;
 
 impl Plugin for CurrencyPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Spirits(100)).insert_resource(Pawns(6));
+        app.insert_resource(Spirits(8)).insert_resource(Pawns(6));
     }
 }
