@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    animations::{AttackAnimation, MovementAnimation},
     card_interactions::{AttackIndicator, MoveIndicator},
     ownership_indicator::{OpponentOwned, SelfOwned},
     IsPlayer1,
@@ -10,6 +11,9 @@ use std::collections::HashMap;
 
 #[derive(Resource)]
 pub struct TileSize(pub f32);
+
+#[derive(Component)]
+pub struct InstantMove;
 
 pub struct TilemapPlugin;
 
@@ -52,7 +56,17 @@ fn load_card_sprites(
 }
 
 fn position_sprites(
-    mut query: Query<(&mut Transform, &CardEntity), (Without<SelfOwned>, Without<OpponentOwned>)>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Transform,
+            &CardEntity,
+            Option<&InstantMove>,
+            Option<&MovementAnimation>,
+            Option<&AttackAnimation>,
+        ),
+        (Without<SelfOwned>, Without<OpponentOwned>),
+    >,
     mut self_ownership_q: Query<
         (&mut Transform, &mut Visibility),
         (With<SelfOwned>, Without<OpponentOwned>),
@@ -64,6 +78,7 @@ fn position_sprites(
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
     is_player_1: Res<IsPlayer1>,
+    mut commands: Commands,
 ) {
     let window = windows.get_primary().unwrap();
     // parentheses only for clarity (they are unnecessary)
@@ -75,29 +90,46 @@ fn position_sprites(
     let mut opponent_ownership_list: Vec<(Mut<Transform>, Mut<Visibility>)> =
         opponent_ownership_q.iter_mut().collect();
 
-    for (mut transform, card_entity) in query.iter_mut() {
-        transform.translation.x = start_x + (card_entity.get_x_pos() as f32 * tile_size.0);
-        transform.translation.y = start_y - (card_entity.get_y_pos() as f32 * tile_size.0);
+    for (entity, mut transform, card_entity, instant_move_opt, move_anim_opt, atck_anim_opt) in
+        query.iter_mut()
+    {
         transform.translation.z = 500.;
-        if card_entity.is_owned_by_p1() == is_player_1.0 {
-            let (mut indicator_transform, mut visibility) = self_ownership_list.pop().unwrap();
+        let target = Vec2::new(
+            start_x + (card_entity.get_x_pos() as f32 * tile_size.0),
+            start_y - (card_entity.get_y_pos() as f32 * tile_size.0),
+        );
+        if instant_move_opt.is_some() {
+            transform.translation.x = target.x;
+            transform.translation.y = target.y;
+            commands.entity(entity).remove::<InstantMove>();
+        } else if (transform.translation.x != target.x || transform.translation.y != target.y)
+            && !atck_anim_opt.is_some()
+        {
+            commands.entity(entity).insert(MovementAnimation { target });
+        }
+
+        let (mut indicator_transform, mut visibility) = self_ownership_list.pop().unwrap();
+        if card_entity.is_owned_by_p1() == is_player_1.0
+            && !move_anim_opt.is_some()
+            && !atck_anim_opt.is_some()
+        {
             indicator_transform.translation = transform.translation;
             indicator_transform.translation.z = 400.0;
             visibility.is_visible = true;
         } else {
-            let (mut indicator_transform, mut visibility) = opponent_ownership_list.pop().unwrap();
+            visibility.is_visible = false;
+        }
+        let (mut indicator_transform, mut visibility) = opponent_ownership_list.pop().unwrap();
+        if card_entity.is_owned_by_p1() != is_player_1.0
+            && !move_anim_opt.is_some()
+            && !atck_anim_opt.is_some()
+        {
             indicator_transform.translation = transform.translation;
             indicator_transform.translation.z = 400.0;
             visibility.is_visible = true;
+        } else {
+            visibility.is_visible = false;
         }
-    }
-    for tuple in self_ownership_list.iter_mut() {
-        let visibility = &mut tuple.1;
-        visibility.is_visible = false;
-    }
-    for tuple in opponent_ownership_list.iter_mut() {
-        let visibility = &mut tuple.1;
-        visibility.is_visible = false;
     }
 }
 

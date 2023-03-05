@@ -1,8 +1,9 @@
 use super::{QueueIn, QueueOut};
 use crate::{
+    animations::AttackAnimation,
     card_interactions::is_in_boundary,
     currency::{Pawns, Spirits},
-    tilemap::{CardSprites, TileSize},
+    tilemap::{self, CardSprites, TileSize},
     ui::in_game_ui::ChatMessages,
     GameState, IsPlayer1, IsSelfTurn,
 };
@@ -29,7 +30,7 @@ fn handle_packets(
     mut state: ResMut<State<GameState>>,
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
-    mut card_entity_q: Query<(Entity, &mut CardEntity)>,
+    mut card_entity_q: Query<(Entity, &mut CardEntity, &Transform)>,
     mut visible_q: Query<&mut Visibility, Without<CardEntity>>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
@@ -67,10 +68,11 @@ fn handle_packets(
                         transform: Transform::from_xyz(1000000000.0, 1000000000.0, 500.),
                         ..Default::default()
                     })
-                    .insert(card_entity);
+                    .insert(card_entity)
+                    .insert(tilemap::InstantMove);
             }
             ServerMessage::MoveTroop(start_x, start_y, end_x, end_y) => {
-                for (_, mut card_entity) in card_entity_q.iter_mut() {
+                for (_, mut card_entity, _) in card_entity_q.iter_mut() {
                     if card_entity.get_x_pos() == start_x && card_entity.get_y_pos() == start_y {
                         card_entity.set_x_pos(end_x);
                         card_entity.set_y_pos(end_y);
@@ -79,17 +81,17 @@ fn handle_packets(
                 }
             }
             ServerMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
-                let mut attacker: Option<(Entity, Mut<CardEntity>)> = None;
-                let mut attacked: Option<(Entity, Mut<CardEntity>)> = None;
-                for (entity, mut card_entity) in card_entity_q.iter_mut() {
+                let mut attacker: Option<(Entity, Mut<CardEntity>, &Transform)> = None;
+                let mut attacked: Option<(Entity, Mut<CardEntity>, &Transform)> = None;
+                for (entity, mut card_entity, transform) in card_entity_q.iter_mut() {
                     if card_entity.clone().get_x_pos() == start_x
                         && card_entity.clone().get_y_pos() == start_y
                     {
-                        attacker = Some((entity, card_entity));
+                        attacker = Some((entity, card_entity, transform));
                     } else if card_entity.clone().get_x_pos() == end_x
                         && card_entity.clone().get_y_pos() == end_y
                     {
-                        attacked = Some((entity, card_entity));
+                        attacked = Some((entity, card_entity, transform));
                     }
                 }
                 let mut attacker = attacker.unwrap();
@@ -102,6 +104,11 @@ fn handle_packets(
                         attacked.1.stun_count += amount;
                     }
                 }
+                commands.entity(attacker.0).insert(AttackAnimation {
+                    target: Vec2::new(attacked.2.translation.x, attacked.2.translation.y),
+                    initial: Vec2::new(attacker.2.translation.x, attacker.2.translation.y),
+                    moving_back: false,
+                });
                 if attacked.1.current_hp <= 0. {
                     commands.entity(attacked.0).despawn();
                     attacker.1.set_x_pos(end_x);
@@ -120,7 +127,7 @@ fn handle_packets(
             }
             ServerMessage::StartTurn => {
                 is_self_turn.0 = true;
-                for (_, mut card_entity) in card_entity_q.iter_mut() {
+                for (_, mut card_entity, _) in card_entity_q.iter_mut() {
                     if card_entity.is_owned_by_p1() == is_player_1_res.0 {
                         card_entity.reset();
                     }
@@ -128,7 +135,7 @@ fn handle_packets(
                 spirit_count.0 += 1;
             }
             ServerMessage::EndGame(won) => {
-                for (entity, _) in card_entity_q.iter() {
+                for (entity, _, _) in card_entity_q.iter() {
                     commands.entity(entity).despawn();
                 }
                 for mut visibility in visible_q.iter_mut() {

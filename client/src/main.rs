@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 
+pub mod animations;
 pub mod card_interactions;
 pub mod currency;
 pub mod net;
@@ -15,6 +16,7 @@ pub mod tilemap;
 pub mod ui;
 pub mod utils;
 
+use animations::AnimationPlugin;
 use card_interactions::CardInteractions;
 use common::card::Card;
 use net::packet_handler::PacketHandlerPlugin;
@@ -85,6 +87,7 @@ pub fn main() {
         .add_plugin(OwnershipIndicatorPlugin)
         .add_startup_system(spawn_camera)
         .add_state(GameState::Waiting)
+        .add_plugin(AnimationPlugin)
         .run();
 }
 
