@@ -20,7 +20,7 @@ use animations::AnimationPlugin;
 use card_interactions::CardInteractions;
 use common::card::Card;
 use net::packet_handler::PacketHandlerPlugin;
-use ownership_indicator::{OpponentOwned, OwnershipIndicatorPlugin};
+use ownership_indicator::OwnershipIndicatorPlugin;
 use stun_indicator::StunIndicatorPlugin;
 use tilemap::TilemapPlugin;
 use ui::UiPlugin;

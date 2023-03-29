@@ -1,36 +1,45 @@
-use crate::tilemap::TileSize;
+use crate::{
+    animations::{AttackAnimation, MovementAnimation},
+    tilemap::TileSize,
+};
 use bevy::prelude::*;
+use common::card::CardEntity;
 
 pub struct OwnershipIndicatorPlugin;
 
 impl Plugin for OwnershipIndicatorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup);
+        app.add_system(update);
     }
 }
 
+// marker component
 #[derive(Component)]
-pub struct OpponentOwned;
-#[derive(Component)]
-pub struct SelfOwned;
+pub struct OwnershipIndicator;
 
-fn setup(mut commands: Commands, tile_size: Res<TileSize>) {
-    for i in 0..12 {
-        let entity = commands
-            .spawn(SpriteBundle {
-                transform: Transform::from_xyz(1000000.0, 0.0, 400.0),
-                sprite: Sprite {
-                    custom_size: Some(Vec2::splat(tile_size.0 * 0.9)),
-                    color: Color::hex(if i % 2 == 0 { "2b8fc4" } else { "e0828a" }).unwrap(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })
-            .id();
-        if i % 2 == 0 {
-            commands.entity(entity).insert(SelfOwned);
-        } else {
-            commands.entity(entity).insert(OpponentOwned);
+fn update(
+    mut card_entity_q: Query<
+        (
+            &Children,
+            Option<&MovementAnimation>,
+            Option<&AttackAnimation>,
+        ),
+        With<CardEntity>,
+    >,
+    mut ownership_indicators: Query<
+        (Entity, &mut Visibility),
+        (Without<CardEntity>, With<OwnershipIndicator>),
+    >,
+) {
+    for (entity, mut visibility) in ownership_indicators.iter_mut() {
+        for (children, move_opt, atck_opt) in card_entity_q.iter() {
+            if children.contains(&entity) {
+                if move_opt.is_some() || atck_opt.is_some() {
+                    visibility.is_visible = false;
+                } else {
+                    visibility.is_visible = true;
+                }
+            }
         }
     }
 }

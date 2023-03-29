@@ -3,6 +3,7 @@ use crate::{
     animations::AttackAnimation,
     card_interactions::is_in_boundary,
     currency::{Pawns, Spirits},
+    ownership_indicator::OwnershipIndicator,
     tilemap::{self, CardSprites, TileSize},
     ui::in_game_ui::ChatMessages,
     GameState, IsPlayer1, IsSelfTurn,
@@ -60,6 +61,7 @@ fn handle_packets(
                         .clone(),
                 );
                 sprite.custom_size = Some(Vec2::splat(tile_size.0 * 0.8));
+                let is_owned_by_p1 = card_entity.is_owned_by_p1();
 
                 commands
                     .spawn(SpriteSheetBundle {
@@ -69,7 +71,24 @@ fn handle_packets(
                         ..Default::default()
                     })
                     .insert(card_entity)
-                    .insert(tilemap::InstantMove);
+                    .insert(tilemap::InstantMove)
+                    .with_children(move |parent| {
+                        parent
+                            .spawn(SpriteBundle {
+                                sprite: Sprite {
+                                    custom_size: Some(Vec2::splat(tile_size.0 * 0.9)),
+                                    color: Color::hex(if is_owned_by_p1 == is_player_1_res.0 {
+                                        "2b8fc4"
+                                    } else {
+                                        "e0828a"
+                                    })
+                                    .unwrap(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            })
+                            .insert(OwnershipIndicator);
+                    });
             }
             ServerMessage::MoveTroop(start_x, start_y, end_x, end_y) => {
                 for (_, mut card_entity, _) in card_entity_q.iter_mut() {
@@ -110,7 +129,7 @@ fn handle_packets(
                     moving_back: false,
                 });
                 if attacked.1.current_hp <= 0. {
-                    commands.entity(attacked.0).despawn();
+                    commands.entity(attacked.0).despawn_recursive();
                     attacker.1.set_x_pos(end_x);
                     attacker.1.set_y_pos(end_y);
                     if attacked.1.is_owned_by_p1() == is_player_1_res.0 {

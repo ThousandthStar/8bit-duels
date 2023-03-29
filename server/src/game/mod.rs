@@ -271,19 +271,21 @@ impl Game {
                                 },
                                 ClientMessage::WinGame(x, y) => {
                                     if let Some(card_entity) = &game_board[y as usize][x as usize] {
+                                        if y != 0 && y != 8{
+                                            continue;
+                                        }
                                         if card_entity.is_owned_by_p1() == is_player_1_turn{
                                             if is_player_1_turn && !(card_entity.stun_count > 0) && !card_entity.has_moved(){
                                                 out_1.lock().unwrap().write_packet(ServerMessage::EndGame(true));
                                                 out_2.lock().unwrap().write_packet(ServerMessage::EndGame(false));
                                                 break 'game_loop;
                                             }
-                                        }
                                             else if !(card_entity.stun_count > 0) && !card_entity.has_moved(){
                                                 out_1.lock().unwrap().write_packet(ServerMessage::EndGame(false));
                                                 out_2.lock().unwrap().write_packet(ServerMessage::EndGame(true));
                                                 break 'game_loop;
                                             }
-
+                                        }
                                     }
                                 }
                                 ClientMessage::ChatMessage(message) => {
