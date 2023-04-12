@@ -1,5 +1,6 @@
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_egui::EguiPlugin;
+use bevy_kira_audio::AudioPlugin;
 use common::card::CardCollection;
 use currency::CurrencyPlugin;
 use serde::{Deserialize, Serialize};
@@ -7,9 +8,11 @@ use serde_json;
 use std::fs;
 
 pub mod animations;
+pub mod audio;
 pub mod card_interactions;
 pub mod currency;
 pub mod net;
+pub mod opening;
 pub mod ownership_indicator;
 pub mod stun_indicator;
 pub mod tilemap;
@@ -17,9 +20,11 @@ pub mod ui;
 pub mod utils;
 
 use animations::AnimationPlugin;
+use audio::GameAudioPlugin;
 use card_interactions::CardInteractions;
 use common::card::Card;
 use net::packet_handler::PacketHandlerPlugin;
+use opening::OpeningPlugin;
 use ownership_indicator::OwnershipIndicatorPlugin;
 use stun_indicator::StunIndicatorPlugin;
 use tilemap::TilemapPlugin;
@@ -27,6 +32,7 @@ use ui::UiPlugin;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum GameState {
+    Opening,
     Waiting,
     PreparingForGame,
     Settings,
@@ -78,6 +84,7 @@ pub fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugin(EguiPlugin)
+        .add_plugin(AudioPlugin)
         .add_plugin(TilemapPlugin)
         .add_plugin(UiPlugin)
         .add_plugin(PacketHandlerPlugin)
@@ -85,8 +92,14 @@ pub fn main() {
         .add_plugin(CurrencyPlugin)
         .add_plugin(StunIndicatorPlugin)
         .add_plugin(OwnershipIndicatorPlugin)
+        .add_plugin(GameAudioPlugin)
+        .add_plugin(OpeningPlugin)
         .add_startup_system(spawn_camera)
-        .add_state(GameState::Waiting)
+        .add_state(if dev_mode {
+            GameState::Waiting
+        } else {
+            GameState::Opening
+        })
         .add_plugin(AnimationPlugin)
         .run();
 }

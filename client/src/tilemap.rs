@@ -18,7 +18,7 @@ pub struct TilemapPlugin;
 
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_tiles)
+        app.add_startup_system_to_stage(StartupStage::PostStartup, spawn_tiles)
             .add_startup_system_to_stage(StartupStage::PreStartup, add_tile_size_res)
             .add_system(position_sprites)
             .add_system(load_card_sprites);

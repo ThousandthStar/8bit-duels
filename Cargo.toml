@@ -6,3 +6,6 @@ members = [
 	"common"
 ]
  resolver="2"
+
+[profile.dev.package."*"]
+opt-level = 3
