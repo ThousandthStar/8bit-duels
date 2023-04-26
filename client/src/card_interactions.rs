@@ -20,7 +20,7 @@ impl Plugin for CardInteractions {
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(card_interactions_system),
             )
-            .add_startup_system(spawn_select_indicator);
+            .add_startup_system_to_stage(StartupStage::PostStartup, spawn_select_indicator);
     }
 }
 

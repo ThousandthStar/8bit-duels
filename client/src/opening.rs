@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::GameState;
+use crate::{ui::GameFont, GameState};
 use std::time::Duration;
 
 pub struct OpeningPlugin;
@@ -70,7 +70,12 @@ fn exit_opening(node_query: Query<Entity, With<Node>>, mut commands: Commands) {
     }
 }
 
-fn spawn_opening(mut commands: Commands, windows: Res<Windows>, asset_server: Res<AssetServer>) {
+fn spawn_opening(
+    mut commands: Commands,
+    windows: Res<Windows>,
+    asset_server: Res<AssetServer>,
+    game_font: Res<GameFont>,
+) {
     let window = windows.get_primary().unwrap();
     let height = window.height();
     commands
@@ -104,7 +109,7 @@ fn spawn_opening(mut commands: Commands, windows: Res<Windows>, asset_server: Re
                         "ThousandthStar",
                         TextStyle {
                             color: Color::rgba(1.0, 1.0, 1.0, 0.0),
-                            font: asset_server.load("Monocraft.otf"),
+                            font: game_font.0.clone_weak(),
                             font_size: height / 20.0,
                         },
                     )
@@ -115,7 +120,7 @@ fn spawn_opening(mut commands: Commands, windows: Res<Windows>, asset_server: Re
                         "Games",
                         TextStyle {
                             color: Color::rgba(1.0, 1.0, 1.0, 0.0),
-                            font: asset_server.load("Monocraft.otf"),
+                            font: game_font.0.clone_weak(),
                             font_size: height / 30.0,
                         },
                     );

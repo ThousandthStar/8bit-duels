@@ -14,15 +14,17 @@ use common::{
     card::{Card, CardCollection},
     messages::ClientMessage,
 };
-use std::{collections::HashMap, fmt, fmt::Display, time::Duration};
+use std::time::Duration;
 
 pub mod in_game_ui;
 pub mod settings;
 pub mod widgets;
+pub mod before_game;
 
 use in_game_ui::InGameUiPlugin;
 use settings::{Settings, SettingsUiPlugin};
 use widgets::WidgetPlugin;
+use before_game::BeforeGamePlugin;
 
 pub struct UiPlugin;
 
@@ -31,7 +33,7 @@ impl Plugin for UiPlugin {
         app.add_system_set(SystemSet::on_update(GameState::Waiting).with_system(waiting_ui))
             .add_system_set(SystemSet::on_enter(GameState::Waiting).with_system(build_ui))
             .add_system_set(SystemSet::on_exit(GameState::Waiting).with_system(destroy_ui))
-            .add_startup_system(setup_main_menu)
+            .add_startup_system_to_stage(StartupStage::PostStartup, setup_main_menu)
             .add_system_set(SystemSet::on_update(GameState::Waiting).with_system(main_menu_buttons))
             .add_system_set(SystemSet::on_exit(GameState::Waiting).with_system(remove_bg_image))
             .add_system_set(
@@ -48,6 +50,7 @@ impl Plugin for UiPlugin {
             .insert_resource(ShowMenu(false))
             .add_plugin(InGameUiPlugin)
             .add_plugin(WidgetPlugin)
+            .add_plugin(BeforeGamePlugin)
             .add_plugin(SettingsUiPlugin);
     }
 }
@@ -89,44 +92,61 @@ fn show_main_menu_elements(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     tile_size: Res<TileSize>,
+    game_font: Res<GameFont>,
 ) {
     commands
-        .spawn(
-            TextBundle::from_section(
-                "8bit Duels",
-                TextStyle {
-                    font: asset_server.load("Monocraft.otf"),
-                    font_size: tile_size.0 / 2.0,
-                    color: Color::BLACK,
-                },
-            )
-            .with_style(Style {
-                position: UiRect::new(Val::Percent(2.0), Val::Auto, Val::Percent(2.0), Val::Auto),
-                align_content: AlignContent::Center,
+        .spawn(NodeBundle {
+            style: Style {
+                justify_content: JustifyContent::Center,
                 ..default()
-            }),
-        )
-        .insert(StartIndicator)
+            },
+            ..default()
+        })
         .with_children(|parent| {
-            parent.spawn(
-                TextBundle::from_section(
-                    "Press Space!",
-                    TextStyle {
-                        font: asset_server.load("Monocraft.otf"),
-                        font_size: tile_size.0 / 4.0,
-                        color: Color::BLACK,
-                    },
+            parent
+                .spawn(
+                    TextBundle::from_section(
+                        "8bit Duels",
+                        TextStyle {
+                            font: game_font.0.clone_weak(),
+                            font_size: tile_size.0 / 2.0,
+                            color: Color::BLACK,
+                        },
+                    )
+                    .with_style(Style {
+                        position: UiRect::new(
+                            Val::Percent(5.0),
+                            Val::Auto,
+                            Val::Percent(2.0),
+                            Val::Auto,
+                        ),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    }),
                 )
-                .with_style(Style {
-                    position: UiRect::new(
-                        Val::Auto,
-                        Val::Auto,
-                        Val::Px(tile_size.0 / 1.5),
-                        Val::Auto,
-                    ),
-                    ..default()
-                }),
-            );
+                .insert(StartIndicator)
+                .with_children(|parent| {
+                    parent.spawn(
+                        TextBundle::from_section(
+                            "Press Space!",
+                            TextStyle {
+                                font: game_font.0.clone_weak(),
+                                font_size: tile_size.0 / 4.0,
+                                color: Color::BLACK,
+                            },
+                        )
+                        .with_style(Style {
+                            position: UiRect::new(
+                                Val::Auto,
+                                Val::Auto,
+                                Val::Px(tile_size.0 / 1.5),
+                                Val::Auto,
+                            ),
+                            ..default()
+                        }),
+                    );
+                });
         });
 
     let mut visibility = query_sprite.single_mut();
@@ -176,8 +196,6 @@ fn setup_main_menu(
 }
 
 fn waiting_ui(
-    mut context: ResMut<EguiContext>,
-    mut state: ResMut<State<GameState>>,
     mut commands: Commands,
     time: Res<Time>,
     mut back_img_q: Query<(&mut Handle<Image>, &mut UiBackgroundImage)>,
@@ -186,6 +204,7 @@ fn waiting_ui(
     tile_size: Res<TileSize>,
     keys: Res<Input<KeyCode>>,
     asset_server: Res<AssetServer>,
+    game_font: Res<GameFont>,
 ) {
     let (mut img, mut img_settings) = back_img_q.single_mut();
     img_settings.timer.tick(time.delta() / 2);
@@ -239,7 +258,7 @@ fn waiting_ui(
                         parent.spawn(TextBundle::from_section(
                             "Play",
                             TextStyle {
-                                font: asset_server.load("Monocraft.otf"),
+                                font: game_font.0.clone_weak(),
                                 font_size: tile_size.0 / 2.5,
                                 color: Color::WHITE,
                             },
@@ -269,7 +288,7 @@ fn waiting_ui(
                         parent.spawn(TextBundle::from_section(
                             "Settings",
                             TextStyle {
-                                font: asset_server.load("Monocraft.otf"),
+                                font: game_font.0.clone_weak(),
                                 font_size: tile_size.0 / 2.5,
                                 color: Color::WHITE,
                             },

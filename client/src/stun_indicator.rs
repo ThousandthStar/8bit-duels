@@ -7,7 +7,7 @@ pub struct StunIndicatorPlugin;
 
 impl Plugin for StunIndicatorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_stun_indicators)
+        app.add_startup_system_to_stage(StartupStage::PostStartup, spawn_stun_indicators)
             .add_system_set(
                 SystemSet::on_update(GameState::Playing).with_system(show_stun_indicator),
             );

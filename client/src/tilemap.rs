@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::{
     animations::{AttackAnimation, MovementAnimation},
     card_interactions::{AttackIndicator, MoveIndicator},
-    IsPlayer1,
+    IsPlayer1, ui::settings::update_window_scale,
+    ui::settings::Settings,
 };
 use common::card::CardEntity;
 use std::collections::HashMap;
@@ -19,14 +20,15 @@ pub struct TilemapPlugin;
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PostStartup, spawn_tiles)
-            .add_startup_system_to_stage(StartupStage::PreStartup, add_tile_size_res)
+            .add_startup_system_to_stage(StartupStage::Startup, add_tile_size_res.after(update_window_scale))
             .add_system(position_sprites)
             .add_system(load_card_sprites);
     }
 }
 
-fn add_tile_size_res(mut commands: Commands, windows: Res<Windows>) {
-    commands.insert_resource(TileSize(windows.get_primary().unwrap().height() / 9.));
+fn add_tile_size_res(mut commands: Commands, windows: Res<Windows>, settings: Res<Settings>) {
+    let window = windows.get_primary().unwrap();
+    commands.insert_resource(TileSize(settings.window_scale as f32 * 20.0));
 }
 
 #[derive(Resource)]

@@ -32,6 +32,7 @@ pub(crate) fn init(commands: &mut Commands, server_address: &str) {
 
             commands.insert_resource(QueueIn(queue_in_arc));
             commands.insert_resource(QueueOut(queue_out_arc));
+            bevy::log::info!("Successfully established TCP connection");
         } else {
             panic!("Could not clone TCP stream")
         }

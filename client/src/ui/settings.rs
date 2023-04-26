@@ -1,6 +1,9 @@
+use std::{error::Error, fs, path::Path};
+use bevy::log::{error, info};
+
 use crate::DevMode;
 
-use super::{widgets::SwitchTextures, *};
+use super::{widgets::{SwitchTextures, Switch}, *};
 use bevy_pkv::PkvStore;
 use serde::{Deserialize, Serialize};
 
@@ -8,21 +11,51 @@ pub struct SettingsUiPlugin;
 
 impl Plugin for SettingsUiPlugin {
     fn build(&self, app: &mut App) {
+        let mut settings: Settings = Settings::default();
+        match load_settings_from_file() {
+        Ok(loaded_settings) => {
+            settings = loaded_settings;
+        }
+        Err(e) => {
+            error!("Critical error loading config: {}", e);
+            info!("Trying to write default settings to file");
+            match write_settings_to_file(&Settings::default()){
+                Ok(_) => {
+                    info!("Successfully wrote default settings to config file");
+                }
+                Err(e) => {
+                    error!("Failed to write: {}", e);
+                }
+            }
+        }
+        }
         app.add_system_set(SystemSet::on_update(GameState::Settings).with_system(settings_ui))
             .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(build_ui))
             .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(destroy_ui))
+            .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(remove_bg_image))
             .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(setup_settings_ui))
-            .add_startup_system_to_stage(StartupStage::PreStartup, pre_setup)
-            .add_startup_system_to_stage(StartupStage::Startup, setup)
-            .insert_resource(Settings::default());
+            .add_startup_system_to_stage(
+                StartupStage::Startup,
+                update_window_scale,
+            )
+            .insert_resource(DevMode(settings.debug_mode))
+            .add_state(if settings.debug_mode{
+                GameState::Waiting
+            }else{
+                    GameState::Opening
+            })
+            .insert_resource(settings);
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Resource)]
+#[derive(Serialize, Deserialize, Clone, Resource, Debug)]
 pub struct Settings {
     pub username: String,
     pub server_addr: String,
     pub debug_mode: bool,
+    pub volume: u8,
+    pub window_scale: u8,
+    pub deck: Vec<Card>,
 }
 
 impl Default for Settings {
@@ -31,24 +64,52 @@ impl Default for Settings {
             username: "Player".to_owned(),
             server_addr: "127.0.0.1:1000".to_owned(),
             debug_mode: false,
+            volume: 100,
+            window_scale: 4,
+            deck: vec![
+                "skeleton".into(),
+                "reaper".into(),
+                "kraken".into(),
+                "spider".into(),
+                "skeleton".into(),
+            ],
         }
     }
 }
 
-fn pre_setup(mut commands: Commands, dev_mode: Res<DevMode>) {
-    if !dev_mode.0 {
-        commands.insert_resource(PkvStore::new("ThousandthStar", "8bit Duels"));
-    }
+fn load_settings_from_file() -> Result<Settings, Box<dyn Error>> {
+    let raw_config = fs::read_to_string(Path::new("assets").join("config.ron"))?;
+    let settings: Settings = ron::from_str(&raw_config)?;
+    Ok(settings)
 }
 
-fn setup(mut settings: ResMut<Settings>, pkv: Option<Res<PkvStore>>) {
-    if pkv.is_none() {
-        return;
-    }
-    let pkv = pkv.unwrap();
-    if let Ok(stored_settings) = pkv.get::<Settings>("settings") {
-        *settings.into_inner() = stored_settings;
-    }
+fn write_settings_to_file(settings: &Settings) -> Result<(), Box<dyn Error>>{
+    let stringed = ron::to_string(settings)?;
+    fs::write(Path::new("assets").join("config.ron"), stringed.as_str())?;
+    Ok(())
+}
+
+pub fn update_window_scale(mut windows: ResMut<Windows>, settings: Res<Settings>) {
+    let mut window = windows.get_primary_mut().unwrap();
+    window.set_resolution(
+        300.0 * settings.window_scale as f32,
+        180.0 * settings.window_scale as f32,
+    );
+}
+// marker components
+#[derive(Component)]
+struct BackButton;
+#[derive(Component)]
+struct SaveButton;
+#[derive(Component)]
+struct BackgroundImage;
+#[derive(Component)]
+struct SavedInfo;
+
+fn remove_bg_image(mut commands: Commands,
+    query: Query<Entity, With<BackgroundImage>>
+){
+    commands.entity(query.single()).despawn();
 }
 
 fn setup_settings_ui(
@@ -56,6 +117,8 @@ fn setup_settings_ui(
     mut commands: Commands,
     tile_size: Res<TileSize>,
     switch_textures: Res<SwitchTextures>,
+    game_font: Res<GameFont>,
+    settings: Res<Settings>,
 ) {
     commands.spawn(SpriteBundle {
         texture: asset_server.load("ui_bg.png"),
@@ -64,7 +127,7 @@ fn setup_settings_ui(
             ..default()
         },
         ..default()
-    });
+    }).insert(BackgroundImage);
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -91,7 +154,7 @@ fn setup_settings_ui(
                     parent.spawn(TextBundle::from_section(
                         "Username",
                         TextStyle {
-                            font: asset_server.load("Monocraft.otf"),
+                            font: game_font.0.clone_weak(),
                             font_size: tile_size.0 / 4.5,
                             color: Color::BLACK,
                         },
@@ -114,7 +177,7 @@ fn setup_settings_ui(
                             "Server Address",
                             TextStyle {
                                 font_size: tile_size.0 / 4.5,
-                                font: asset_server.load("Monocraft.otf"),
+                                font: game_font.0.clone_weak(),
                                 color: Color::BLACK,
                             },
                         )
@@ -144,25 +207,26 @@ fn setup_settings_ui(
                         .spawn(ButtonBundle {
                             style: Style {
                                 position: UiRect {
-                                    bottom: Val::Px(0.),
-                                    left: Val::Px(66.0),
+                                    bottom: Val::Percent(5.0),
+                                    left: Val::Px(tile_size.0 * 0.825),
                                     ..default()
                                 },
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 position_type: PositionType::Absolute,
-                                size: Size::new(Val::Px(288.0), Val::Px(72.0)),
+                                size: Size::new(Val::Px(tile_size.0 * 3.6), Val::Px(tile_size.0 * 0.9)),
                                 ..default()
                             },
                             image: asset_server.load("button.png").into(),
                             ..default()
                         })
+                        .insert(SaveButton)
                         .with_children(|parent| {
                             parent.spawn(
                                 TextBundle::from_section(
                                     "Save",
                                     TextStyle {
-                                        font: asset_server.load("Monocraft.otf"),
+                                        font: game_font.0.clone_weak(),
                                         font_size: tile_size.0 / 4.5,
                                         color: Color::WHITE.into(),
                                     },
@@ -174,7 +238,22 @@ fn setup_settings_ui(
                                 .with_text_alignment(TextAlignment::CENTER),
                             );
                         });
+                    parent.spawn(TextBundle::from_section(
+                        "",
+                        TextStyle{
+                            color: Color::RED.into(),
+                            font_size: tile_size.0 / 4.5,
+                            font: game_font.0.clone_weak()
+                        }
+                    ).with_style(Style{
+                            position: UiRect { bottom: Val::Px(0.0), ..default() },
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        })).insert(SavedInfo);
                 });
+            /*
+             * Second column
+            */
             parent
                 .spawn(NodeBundle {
                     style: Style {
@@ -193,7 +272,7 @@ fn setup_settings_ui(
                     parent.spawn(TextBundle::from_section(
                         "Volume (0-100)",
                         TextStyle {
-                            font: asset_server.load("Monocraft.otf"),
+                            font: game_font.0.clone_weak(),
                             font_size: tile_size.0 / 4.5,
                             color: Color::BLACK,
                         },
@@ -216,7 +295,7 @@ fn setup_settings_ui(
                             "Debug Mode",
                             TextStyle {
                                 font_size: tile_size.0 / 4.5,
-                                font: asset_server.load("Monocraft.otf"),
+                                font: game_font.0.clone_weak(),
                                 color: Color::BLACK,
                             },
                         )
@@ -236,35 +315,36 @@ fn setup_settings_ui(
                                 ..default()
                             },
                             position_type: PositionType::Absolute,
-                            size: Size::new(Val::Px(128.0), Val::Px(64.0)),
+                            size: Size::new(Val::Px(tile_size.0 * 1.6), Val::Px(tile_size.0 * 0.8)),
                             ..default()
                         },
                         image: switch_textures.off.clone_weak().into(),
                         ..default()
-                    });
+                    }).insert(Switch{on: settings.debug_mode});
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
                                 position: UiRect {
-                                    bottom: Val::Px(0.),
-                                    left: Val::Px(66.0),
+                                    bottom: Val::Percent(5.0),
+                                    left: Val::Px(tile_size.0 * 0.825),
                                     ..default()
                                 },
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 position_type: PositionType::Absolute,
-                                size: Size::new(Val::Px(288.0), Val::Px(72.0)),
+                                size: Size::new(Val::Px(tile_size.0 * 3.6), Val::Px(tile_size.0 * 0.9)),
                                 ..default()
                             },
                             image: asset_server.load("button.png").into(),
                             ..default()
                         })
+                        .insert(BackButton)
                         .with_children(|parent| {
                             parent.spawn(
                                 TextBundle::from_section(
                                     "Back",
                                     TextStyle {
-                                        font: asset_server.load("Monocraft.otf"),
+                                        font: game_font.0.clone_weak(),
                                         font_size: tile_size.0 / 4.5,
                                         color: Color::WHITE.into(),
                                     },
@@ -281,44 +361,31 @@ fn setup_settings_ui(
 }
 
 fn settings_ui(
-    mut context: ResMut<EguiContext>,
-    mut pkv: Option<ResMut<PkvStore>>,
     mut settings: ResMut<Settings>,
     mut state: ResMut<State<GameState>>,
+    button_q: Query<(&Interaction, Option<&BackButton>, Option<&SaveButton>), (Changed<Interaction>, Without<Switch>, Without<SavedInfo>)>,
+    switch_q: Query<&Switch, Without<SavedInfo>>,
+    mut saved_text_info_q: Query<&mut Text, With<SavedInfo>>
 ) {
-    if pkv.is_none() {
-        return;
-    }
-    let mut pkv = pkv.unwrap();
-    egui::SidePanel::left("settings_panel")
-        .frame(egui::Frame::none())
-        .show(context.ctx_mut(), |ui| {
-            ui.vertical(|ui| {
-                ui.label("Settings Menu");
-                ui.horizontal(|ui| {
-                    ui.label("Username");
-                    ui.text_edit_singleline(&mut settings.username);
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Server address");
-                    ui.text_edit_singleline(&mut settings.server_addr);
-                });
-                if ui
-                    .button(if settings.debug_mode {
-                        "Disable debug mode"
-                    } else {
-                        "Enable debug mode"
-                    })
-                    .clicked()
-                {
-                    settings.debug_mode = !settings.debug_mode;
-                }
-                if ui.button("Save").clicked() {
-                    pkv.set::<Settings>("settings", &settings.clone().into());
-                }
-                if ui.button("Back").clicked() {
+    for (interaction, back_btn_opt, save_btn_opt) in button_q.iter() {
+        match *interaction {
+            Interaction::Clicked => {
+                if back_btn_opt.is_some() {
                     state.set(GameState::Waiting);
                 }
-            });
-        });
+                if save_btn_opt.is_some() {
+                    settings.debug_mode = switch_q.single().on;
+                    match write_settings_to_file(&settings){
+                        Ok(_) => {
+                            saved_text_info_q.single_mut().sections[0].value = "Settings Saved Successfully".to_owned();
+                        },
+                        Err(e) => {
+                            saved_text_info_q.single_mut().sections[0].value = "Failed to Save Settings".to_owned();
+                        },
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }

@@ -18,6 +18,7 @@ pub mod stun_indicator;
 pub mod tilemap;
 pub mod ui;
 pub mod utils;
+pub mod debug;
 
 use animations::AnimationPlugin;
 use audio::GameAudioPlugin;
@@ -29,6 +30,7 @@ use ownership_indicator::OwnershipIndicatorPlugin;
 use stun_indicator::StunIndicatorPlugin;
 use tilemap::TilemapPlugin;
 use ui::UiPlugin;
+use debug::DebugPlugin;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum GameState {
@@ -55,16 +57,7 @@ pub struct DevMode(bool);
 
 #[warn(unused_must_use)]
 pub fn main() {
-    std::env::set_var("RUST_BACKTRACE", "1");
-    let args: Vec<String> = std::env::args().collect();
-    let mut dev_mode = false;
-    if let Some(arg) = args.get(1) {
-        if *arg == "dev".to_owned() {
-            dev_mode = true;
-        }
-    }
     App::new()
-        .insert_resource(DevMode(dev_mode))
         .insert_resource(CardCollection::new())
         .insert_resource(IsSelfTurn(false))
         .insert_resource(IsPlayer1(false))
@@ -94,12 +87,8 @@ pub fn main() {
         .add_plugin(OwnershipIndicatorPlugin)
         .add_plugin(GameAudioPlugin)
         .add_plugin(OpeningPlugin)
+        .add_plugin(DebugPlugin)
         .add_startup_system(spawn_camera)
-        .add_state(if dev_mode {
-            GameState::Waiting
-        } else {
-            GameState::Opening
-        })
         .add_plugin(AnimationPlugin)
         .run();
 }
