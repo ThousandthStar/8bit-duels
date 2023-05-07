@@ -16,15 +16,15 @@ use common::{
 };
 use std::time::Duration;
 
+pub mod before_game;
 pub mod in_game_ui;
 pub mod settings;
 pub mod widgets;
-pub mod before_game;
 
+use before_game::BeforeGamePlugin;
 use in_game_ui::InGameUiPlugin;
 use settings::{Settings, SettingsUiPlugin};
 use widgets::WidgetPlugin;
-use before_game::BeforeGamePlugin;
 
 pub struct UiPlugin;
 
@@ -64,6 +64,9 @@ pub struct UiBackgroundImage {
 
 #[derive(Resource)]
 struct ShowMenu(bool);
+
+#[derive(Component)]
+struct ConnectionErrorText;
 
 #[derive(Resource)]
 pub struct GameFont(pub Handle<Font>);
@@ -294,6 +297,27 @@ fn waiting_ui(
                             },
                         ));
                     });
+                parent
+                    .spawn(
+                        TextBundle::from_section(
+                            "Could not connect to the server!",
+                            TextStyle {
+                                font: game_font.0.clone_weak(),
+                                font_size: tile_size.0 / 3.5,
+                                color: Color::BLACK,
+                            },
+                        )
+                        .with_style(Style {
+                            position: UiRect {
+                                bottom: Val::Px(0.0),
+                                ..default()
+                            },
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        }),
+                    )
+                    .insert(Visibility::INVISIBLE)
+                    .insert(ConnectionErrorText);
             });
         commands
             .entity(start_indicator_q.single())
@@ -303,24 +327,34 @@ fn waiting_ui(
 
 fn main_menu_buttons(
     mut state: ResMut<State<GameState>>,
-    mut query: Query<(
-        &Interaction,
-        &mut BackgroundColor,
-        Option<&PlayButton>,
-        Option<&SettingsButton>,
-    )>,
+    mut query: Query<(&Interaction, Option<&PlayButton>, Option<&SettingsButton>)>,
+    mut conneciton_refused_text: Query<
+        (&mut Visibility, Option<&ConnectionErrorText>),
+        Without<Interaction>,
+    >,
     settings: Res<Settings>,
     mut commands: Commands,
 ) {
-    for (interaction, mut color, play_btn_opt, settings_btn_opt) in query.iter_mut() {
+    for (interaction, play_btn_opt, settings_btn_opt) in query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 if play_btn_opt.is_some() {
-                    net::init(&mut commands, &settings.server_addr);
-                    state.set(GameState::PreparingForGame);
+                    match net::init(&mut commands, &settings.server_addr) {
+                        Ok(_) => {
+                            state.set(GameState::PreparingForGame).unwrap();
+                        }
+                        Err(e) => {
+                            for (mut visibility, opt) in conneciton_refused_text.iter_mut() {
+                                if opt.is_some() {
+                                    visibility.is_visible = true;
+                                }
+                            }
+                            bevy::log::error!("Could not connect to the server: {}", e);
+                        }
+                    }
                 }
                 if settings_btn_opt.is_some() {
-                    state.set(GameState::Settings);
+                    state.set(GameState::Settings).unwrap();
                 }
             }
             _ => {}

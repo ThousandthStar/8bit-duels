@@ -3,8 +3,9 @@ use bevy::prelude::*;
 use crate::{
     animations::{AttackAnimation, MovementAnimation},
     card_interactions::{AttackIndicator, MoveIndicator},
-    IsPlayer1, ui::settings::update_window_scale,
+    ui::settings::update_window_scale,
     ui::settings::Settings,
+    GameState, IsPlayer1,
 };
 use common::card::CardEntity;
 use std::collections::HashMap;
@@ -19,10 +20,15 @@ pub struct TilemapPlugin;
 
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PostStartup, spawn_tiles)
-            .add_startup_system_to_stage(StartupStage::Startup, add_tile_size_res.after(update_window_scale))
-            .add_system(position_sprites)
-            .add_system(load_card_sprites);
+        app.add_system_set(
+            SystemSet::on_enter(GameState::PreparingForGame).with_system(spawn_tiles),
+        )
+        .add_startup_system_to_stage(
+            StartupStage::Startup,
+            add_tile_size_res.after(update_window_scale),
+        )
+        .add_system(position_sprites)
+        .add_system(load_card_sprites);
     }
 }
 
@@ -111,7 +117,7 @@ fn spawn_tiles(
     for i in 0..5 {
         for j in 0..9 {
             commands
-                .spawn_bundle(SpriteBundle {
+                .spawn(SpriteBundle {
                     transform: Transform::from_xyz(
                         start_x + one_third_window + (i as f32 * tile_size.0),
                         start_y - (j as f32 * tile_size.0),
@@ -131,7 +137,7 @@ fn spawn_tiles(
                 .insert(Tile);
             for l in 0..2 {
                 let spawned_entity = commands
-                    .spawn_bundle(SpriteBundle {
+                    .spawn(SpriteBundle {
                         transform: Transform::from_xyz(
                             start_x + one_third_window + (i as f32 * tile_size.0),
                             start_y - (j as f32 * tile_size.0),

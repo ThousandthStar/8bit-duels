@@ -1,9 +1,12 @@
-use std::{error::Error, fs, path::Path};
 use bevy::log::{error, info};
+use std::{error::Error, fs, path::Path};
 
 use crate::DevMode;
 
-use super::{widgets::{SwitchTextures, Switch}, *};
+use super::{
+    widgets::{Switch, SwitchTextures},
+    *,
+};
 use bevy_pkv::PkvStore;
 use serde::{Deserialize, Serialize};
 
@@ -13,36 +16,33 @@ impl Plugin for SettingsUiPlugin {
     fn build(&self, app: &mut App) {
         let mut settings: Settings = Settings::default();
         match load_settings_from_file() {
-        Ok(loaded_settings) => {
-            settings = loaded_settings;
-        }
-        Err(e) => {
-            error!("Critical error loading config: {}", e);
-            info!("Trying to write default settings to file");
-            match write_settings_to_file(&Settings::default()){
-                Ok(_) => {
-                    info!("Successfully wrote default settings to config file");
-                }
-                Err(e) => {
-                    error!("Failed to write: {}", e);
+            Ok(loaded_settings) => {
+                settings = loaded_settings;
+            }
+            Err(e) => {
+                error!("Critical error loading config: {}", e);
+                info!("Trying to write default settings to file");
+                match write_settings_to_file(&Settings::default()) {
+                    Ok(_) => {
+                        info!("Successfully wrote default settings to config file");
+                    }
+                    Err(e) => {
+                        error!("Failed to write: {}", e);
+                    }
                 }
             }
-        }
         }
         app.add_system_set(SystemSet::on_update(GameState::Settings).with_system(settings_ui))
             .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(build_ui))
             .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(destroy_ui))
             .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(remove_bg_image))
             .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(setup_settings_ui))
-            .add_startup_system_to_stage(
-                StartupStage::Startup,
-                update_window_scale,
-            )
+            .add_startup_system_to_stage(StartupStage::Startup, update_window_scale)
             .insert_resource(DevMode(settings.debug_mode))
-            .add_state(if settings.debug_mode{
+            .add_state(if settings.debug_mode {
                 GameState::Waiting
-            }else{
-                    GameState::Opening
+            } else {
+                GameState::Opening
             })
             .insert_resource(settings);
     }
@@ -83,7 +83,7 @@ fn load_settings_from_file() -> Result<Settings, Box<dyn Error>> {
     Ok(settings)
 }
 
-fn write_settings_to_file(settings: &Settings) -> Result<(), Box<dyn Error>>{
+fn write_settings_to_file(settings: &Settings) -> Result<(), Box<dyn Error>> {
     let stringed = ron::to_string(settings)?;
     fs::write(Path::new("assets").join("config.ron"), stringed.as_str())?;
     Ok(())
@@ -106,9 +106,7 @@ struct BackgroundImage;
 #[derive(Component)]
 struct SavedInfo;
 
-fn remove_bg_image(mut commands: Commands,
-    query: Query<Entity, With<BackgroundImage>>
-){
+fn remove_bg_image(mut commands: Commands, query: Query<Entity, With<BackgroundImage>>) {
     commands.entity(query.single()).despawn();
 }
 
@@ -120,14 +118,16 @@ fn setup_settings_ui(
     game_font: Res<GameFont>,
     settings: Res<Settings>,
 ) {
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("ui_bg.png"),
-        sprite: Sprite {
-            custom_size: Some(Vec2::new(tile_size.0 * 15.0, tile_size.0 * 9.0)),
+    commands
+        .spawn(SpriteBundle {
+            texture: asset_server.load("ui_bg.png"),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(tile_size.0 * 15.0, tile_size.0 * 9.0)),
+                ..default()
+            },
             ..default()
-        },
-        ..default()
-    }).insert(BackgroundImage);
+        })
+        .insert(BackgroundImage);
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -214,7 +214,10 @@ fn setup_settings_ui(
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 position_type: PositionType::Absolute,
-                                size: Size::new(Val::Px(tile_size.0 * 3.6), Val::Px(tile_size.0 * 0.9)),
+                                size: Size::new(
+                                    Val::Px(tile_size.0 * 3.6),
+                                    Val::Px(tile_size.0 * 0.9),
+                                ),
                                 ..default()
                             },
                             image: asset_server.load("button.png").into(),
@@ -238,22 +241,30 @@ fn setup_settings_ui(
                                 .with_text_alignment(TextAlignment::CENTER),
                             );
                         });
-                    parent.spawn(TextBundle::from_section(
-                        "",
-                        TextStyle{
-                            color: Color::RED.into(),
-                            font_size: tile_size.0 / 4.5,
-                            font: game_font.0.clone_weak()
-                        }
-                    ).with_style(Style{
-                            position: UiRect { bottom: Val::Px(0.0), ..default() },
-                            position_type: PositionType::Absolute,
-                            ..default()
-                        })).insert(SavedInfo);
+                    parent
+                        .spawn(
+                            TextBundle::from_section(
+                                "",
+                                TextStyle {
+                                    color: Color::RED.into(),
+                                    font_size: tile_size.0 / 4.5,
+                                    font: game_font.0.clone_weak(),
+                                },
+                            )
+                            .with_style(Style {
+                                position: UiRect {
+                                    bottom: Val::Px(0.0),
+                                    ..default()
+                                },
+                                position_type: PositionType::Absolute,
+                                ..default()
+                            }),
+                        )
+                        .insert(SavedInfo);
                 });
             /*
              * Second column
-            */
+             */
             parent
                 .spawn(NodeBundle {
                     style: Style {
@@ -308,19 +319,26 @@ fn setup_settings_ui(
                             ..default()
                         }),
                     );
-                    parent.spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect {
-                                top: Val::Percent(22.0),
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                position: UiRect {
+                                    top: Val::Percent(22.0),
+                                    ..default()
+                                },
+                                position_type: PositionType::Absolute,
+                                size: Size::new(
+                                    Val::Px(tile_size.0 * 1.6),
+                                    Val::Px(tile_size.0 * 0.8),
+                                ),
                                 ..default()
                             },
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Px(tile_size.0 * 1.6), Val::Px(tile_size.0 * 0.8)),
+                            image: switch_textures.off.clone_weak().into(),
                             ..default()
-                        },
-                        image: switch_textures.off.clone_weak().into(),
-                        ..default()
-                    }).insert(Switch{on: settings.debug_mode});
+                        })
+                        .insert(Switch {
+                            on: settings.debug_mode,
+                        });
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
@@ -332,7 +350,10 @@ fn setup_settings_ui(
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 position_type: PositionType::Absolute,
-                                size: Size::new(Val::Px(tile_size.0 * 3.6), Val::Px(tile_size.0 * 0.9)),
+                                size: Size::new(
+                                    Val::Px(tile_size.0 * 3.6),
+                                    Val::Px(tile_size.0 * 0.9),
+                                ),
                                 ..default()
                             },
                             image: asset_server.load("button.png").into(),
@@ -363,9 +384,12 @@ fn setup_settings_ui(
 fn settings_ui(
     mut settings: ResMut<Settings>,
     mut state: ResMut<State<GameState>>,
-    button_q: Query<(&Interaction, Option<&BackButton>, Option<&SaveButton>), (Changed<Interaction>, Without<Switch>, Without<SavedInfo>)>,
+    button_q: Query<
+        (&Interaction, Option<&BackButton>, Option<&SaveButton>),
+        (Changed<Interaction>, Without<Switch>, Without<SavedInfo>),
+    >,
     switch_q: Query<&Switch, Without<SavedInfo>>,
-    mut saved_text_info_q: Query<&mut Text, With<SavedInfo>>
+    mut saved_text_info_q: Query<&mut Text, With<SavedInfo>>,
 ) {
     for (interaction, back_btn_opt, save_btn_opt) in button_q.iter() {
         match *interaction {
@@ -375,13 +399,15 @@ fn settings_ui(
                 }
                 if save_btn_opt.is_some() {
                     settings.debug_mode = switch_q.single().on;
-                    match write_settings_to_file(&settings){
+                    match write_settings_to_file(&settings) {
                         Ok(_) => {
-                            saved_text_info_q.single_mut().sections[0].value = "Settings Saved Successfully".to_owned();
-                        },
+                            saved_text_info_q.single_mut().sections[0].value =
+                                "Settings Saved Successfully".to_owned();
+                        }
                         Err(e) => {
-                            saved_text_info_q.single_mut().sections[0].value = "Failed to Save Settings".to_owned();
-                        },
+                            saved_text_info_q.single_mut().sections[0].value =
+                                "Failed to Save Settings".to_owned();
+                        }
                     }
                 }
             }
