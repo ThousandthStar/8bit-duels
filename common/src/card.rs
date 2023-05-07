@@ -101,10 +101,14 @@ impl Card {
     }
 }
 
-impl From<&str> for Card{
+impl From<&str> for Card {
     fn from(value: &str) -> Self {
         let collection = CardCollection::new();
-        collection.0.get(&value.to_string()).unwrap_or(collection.0.get(&"skeleton".to_owned()).unwrap()).clone()
+        collection
+            .0
+            .get(&value.to_string())
+            .unwrap_or(collection.0.get(&"skeleton".to_owned()).unwrap())
+            .clone()
     }
 }
 
