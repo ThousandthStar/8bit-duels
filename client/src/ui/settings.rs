@@ -4,7 +4,7 @@ use std::{error::Error, fs, path::Path};
 use crate::DevMode;
 
 use super::{
-    widgets::{Switch, SwitchTextures},
+    widgets::{Switch, SwitchTextures, TextBoxButton, TextBoxInput},
     *,
 };
 use bevy_pkv::PkvStore;
@@ -159,19 +159,44 @@ fn setup_settings_ui(
                             color: Color::BLACK,
                         },
                     ));
-                    parent.spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect {
-                                top: Val::Percent(5.0),
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                position: UiRect {
+                                    top: Val::Percent(5.0),
+                                    ..default()
+                                },
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::FlexStart,
+                                position_type: PositionType::Absolute,
+                                size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
                                 ..default()
                             },
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
+                            image: asset_server.load("text_box_bg.png").into(),
                             ..default()
-                        },
-                        image: asset_server.load("text_box_bg.png").into(),
-                        ..default()
-                    });
+                        })
+                        .insert(TextBoxButton)
+                        .with_children(|parent| {
+                            parent
+                                .spawn(
+                                    TextBundle::from_section(
+                                        "",
+                                        TextStyle {
+                                            font: game_font.0.clone_weak(),
+                                            font_size: tile_size.0 / 4.5,
+                                            color: Color::WHITE,
+                                        },
+                                    )
+                                    .with_style(Style {
+                                        margin: UiRect {
+                                            left: Val::Percent(5.0),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    }),
+                                )
+                                .insert(TextBoxInput { max: 30 });
+                        });
                     parent.spawn(
                         TextBundle::from_section(
                             "Server Address",
@@ -190,19 +215,44 @@ fn setup_settings_ui(
                             ..default()
                         }),
                     );
-                    parent.spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect {
-                                top: Val::Percent(22.0),
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                position: UiRect {
+                                    top: Val::Percent(22.0),
+                                    ..default()
+                                },
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::FlexStart,
+                                position_type: PositionType::Absolute,
+                                size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
                                 ..default()
                             },
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
+                            image: asset_server.load("text_box_bg.png").into(),
                             ..default()
-                        },
-                        image: asset_server.load("text_box_bg.png").into(),
-                        ..default()
-                    });
+                        })
+                        .insert(TextBoxButton)
+                        .with_children(|parent| {
+                            parent
+                                .spawn(
+                                    TextBundle::from_section(
+                                        "",
+                                        TextStyle {
+                                            font: game_font.0.clone_weak(),
+                                            font_size: tile_size.0 / 4.5,
+                                            color: Color::WHITE,
+                                        },
+                                    )
+                                    .with_style(Style {
+                                        margin: UiRect {
+                                            left: Val::Percent(5.0),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    }),
+                                )
+                                .insert(TextBoxInput { max: 30 });
+                        });
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
@@ -288,19 +338,45 @@ fn setup_settings_ui(
                             color: Color::BLACK,
                         },
                     ));
-                    parent.spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect {
-                                top: Val::Percent(5.0),
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                position: UiRect {
+                                    top: Val::Percent(5.0),
+                                    ..default()
+                                },
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::FlexStart,
+
+                                position_type: PositionType::Absolute,
+                                size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
                                 ..default()
                             },
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Percent(100.0), Val::Percent(10.0)),
+                            image: asset_server.load("text_box_bg.png").into(),
                             ..default()
-                        },
-                        image: asset_server.load("text_box_bg.png").into(),
-                        ..default()
-                    });
+                        })
+                        .insert(TextBoxButton)
+                        .with_children(|parent| {
+                            parent
+                                .spawn(
+                                    TextBundle::from_section(
+                                        "",
+                                        TextStyle {
+                                            font: game_font.0.clone_weak(),
+                                            font_size: tile_size.0 / 4.5,
+                                            color: Color::WHITE,
+                                        },
+                                    )
+                                    .with_style(Style {
+                                        margin: UiRect {
+                                            left: Val::Percent(5.0),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    }),
+                                )
+                                .insert(TextBoxInput { max: 30 });
+                        });
                     parent.spawn(
                         TextBundle::from_section(
                             "Debug Mode",
