@@ -105,6 +105,10 @@ struct SaveButton;
 struct BackgroundImage;
 #[derive(Component)]
 struct SavedInfo;
+#[derive(Component)]
+struct UsernameTextBox;
+#[derive(Component)]
+struct ServerAddressTextBox;
 
 fn remove_bg_image(mut commands: Commands, query: Query<Entity, With<BackgroundImage>>) {
     commands.entity(query.single()).despawn();
@@ -180,7 +184,7 @@ fn setup_settings_ui(
                             parent
                                 .spawn(
                                     TextBundle::from_section(
-                                        "",
+                                        &settings.username,
                                         TextStyle {
                                             font: game_font.0.clone_weak(),
                                             font_size: tile_size.0 / 4.5,
@@ -195,7 +199,8 @@ fn setup_settings_ui(
                                         ..Default::default()
                                     }),
                                 )
-                                .insert(TextBoxInput { max: 30 });
+                                .insert(TextBoxInput { max: 30 })
+                                .insert(UsernameTextBox);
                         });
                     parent.spawn(
                         TextBundle::from_section(
@@ -236,7 +241,7 @@ fn setup_settings_ui(
                             parent
                                 .spawn(
                                     TextBundle::from_section(
-                                        "",
+                                        &settings.server_addr,
                                         TextStyle {
                                             font: game_font.0.clone_weak(),
                                             font_size: tile_size.0 / 4.5,
@@ -251,7 +256,8 @@ fn setup_settings_ui(
                                         ..Default::default()
                                     }),
                                 )
-                                .insert(TextBoxInput { max: 30 });
+                                .insert(TextBoxInput { max: 30 })
+                                .insert(ServerAddressTextBox);
                         });
                     parent
                         .spawn(ButtonBundle {
@@ -330,6 +336,7 @@ fn setup_settings_ui(
                     ..default()
                 })
                 .with_children(|parent| {
+            /*
                     parent.spawn(TextBundle::from_section(
                         "Volume (0-100)",
                         TextStyle {
@@ -377,6 +384,7 @@ fn setup_settings_ui(
                                 )
                                 .insert(TextBoxInput { max: 30 });
                         });
+                    */
                     parent.spawn(
                         TextBundle::from_section(
                             "Debug Mode",
@@ -387,10 +395,6 @@ fn setup_settings_ui(
                             },
                         )
                         .with_style(Style {
-                            position: UiRect {
-                                top: Val::Percent(17.5),
-                                ..default()
-                            },
                             position_type: PositionType::Absolute,
                             ..default()
                         }),
@@ -399,7 +403,7 @@ fn setup_settings_ui(
                         .spawn(ButtonBundle {
                             style: Style {
                                 position: UiRect {
-                                    top: Val::Percent(22.0),
+                                    top: Val::Percent(5.0),
                                     ..default()
                                 },
                                 position_type: PositionType::Absolute,
@@ -446,10 +450,8 @@ fn setup_settings_ui(
                                         color: Color::WHITE.into(),
                                     },
                                 )
-                                .with_style(Style {
-                                    margin: UiRect { ..default() },
-                                    ..default()
-                                })
+                                .with_style(Style::default()
+                                )
                                 .with_text_alignment(TextAlignment::CENTER),
                             );
                         });
@@ -464,6 +466,8 @@ fn settings_ui(
         (&Interaction, Option<&BackButton>, Option<&SaveButton>),
         (Changed<Interaction>, Without<Switch>, Without<SavedInfo>),
     >,
+    username_text_box_q: Query<&Text, (With<UsernameTextBox>, Without<SavedInfo>, Without<ServerAddressTextBox>, Without<Switch>, Without<BackButton>, Without<SaveButton>)>,
+    server_addr_text_box_q: Query<&Text, (With<ServerAddressTextBox>, Without<SavedInfo>, Without<UsernameTextBox>, Without<Switch>, Without<BackButton>, Without<SaveButton>)>,
     switch_q: Query<&Switch, Without<SavedInfo>>,
     mut saved_text_info_q: Query<&mut Text, With<SavedInfo>>,
 ) {
@@ -475,6 +479,8 @@ fn settings_ui(
                 }
                 if save_btn_opt.is_some() {
                     settings.debug_mode = switch_q.single().on;
+                    settings.username = username_text_box_q.single().sections[0].value.trim().replace("\u{f7}", "");
+                    settings.server_addr = server_addr_text_box_q.single().sections[0].value.trim().replace("\u{f7}", "");
                     match write_settings_to_file(&settings) {
                         Ok(_) => {
                             saved_text_info_q.single_mut().sections[0].value =
