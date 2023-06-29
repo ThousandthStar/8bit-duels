@@ -90,12 +90,14 @@ fn text_box_system(
     if let Some(text_box_entity) = selected_text_box.0 {
         if let Ok((mut text, text_box_input)) = text_box_query.get_mut(text_box_entity) {
             let mut value = text.sections.get(0).unwrap().value.clone();
-            value += &string_input;
             if input.just_pressed(KeyCode::Back) {
                 let length = value.len();
-                if length >= 2 {
-                    value.truncate(length - 2);
+                if length >= 1 {
+                    value.truncate(length - 1);
                 }
+            }
+            else{
+                value += &string_input;
             }
             value.truncate(text_box_input.max);
             text.sections.get_mut(0).unwrap().value = value;
