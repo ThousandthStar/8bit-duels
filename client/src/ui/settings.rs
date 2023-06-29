@@ -479,8 +479,8 @@ fn settings_ui(
                 }
                 if save_btn_opt.is_some() {
                     settings.debug_mode = switch_q.single().on;
-                    settings.username = username_text_box_q.single().sections[0].value.trim().replace("\u{f7}", "");
-                    settings.server_addr = server_addr_text_box_q.single().sections[0].value.trim().replace("\u{f7}", "");
+                    settings.username = username_text_box_q.single().sections[0].value.trim().replace(|c: char| !c.is_ascii() || c.is_whitespace(), "");
+                    settings.server_addr = server_addr_text_box_q.single().sections[0].value.trim().replace(|c: char| !c.is_ascii() || c.is_whitespace(), "");
                     match write_settings_to_file(&settings) {
                         Ok(_) => {
                             saved_text_info_q.single_mut().sections[0].value =
