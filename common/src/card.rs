@@ -227,3 +227,20 @@ pub enum CardAbility {
     SpiritCollector,
     Stun { amount: i32 },
 }
+
+
+#[derive(Resource)]
+pub struct CardNameToSprite(pub HashMap<String, u8>);
+
+impl Default for CardNameToSprite{
+    fn default() -> CardNameToSprite {
+        let mut map: HashMap<String, u8> = HashMap::new();
+        map.insert("reaper".to_string(), 0);
+        map.insert("skeleton".to_string(), 1);
+        map.insert("kraken".to_string(), 2);
+        map.insert("spider".to_string(), 3);
+        CardNameToSprite (
+           map 
+        )
+    }
+}

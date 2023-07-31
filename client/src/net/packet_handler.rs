@@ -5,7 +5,7 @@ use crate::{
     currency::{Pawns, Spirits},
     ownership_indicator::OwnershipIndicator,
     tilemap::{self, CardSprites, TileSize},
-    ui::in_game_ui::ChatMessages,
+    ui::{in_game_ui::{ChatMessages, ChatText}, GameFont},
     GameState, IsPlayer1, IsSelfTurn,
 };
 use bevy::prelude::*;
@@ -32,12 +32,13 @@ fn handle_packets(
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
     mut card_entity_q: Query<(Entity, &mut CardEntity, &Transform)>,
-    mut visible_q: Query<&mut Visibility, Without<CardEntity>>,
+    mut visible_q: Query<&mut Visibility, (Without<CardEntity>, Without<ChatText>)>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
     mut pawn_count: ResMut<Pawns>,
     mut spirit_count: ResMut<Spirits>,
-    mut chat_messages: ResMut<ChatMessages>,
+    mut chat_text_q: Query<(&mut Visibility, &mut Text), (With<ChatText>, Without<CardEntity>)>,
+    game_font: Res<GameFont>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
@@ -159,11 +160,18 @@ fn handle_packets(
                 }
                 for mut visibility in visible_q.iter_mut() {
                     visibility.is_visible = false;
+                    let (mut visibility, _) = chat_text_q.single_mut();
+                    visibility.is_visible = false;
                 }
                 state.set(GameState::Waiting);
             }
             ServerMessage::ChatMessage(message) => {
-                chat_messages.0.push(message);
+                let (_, mut text) = chat_text_q.single_mut();
+                text.sections.push(TextSection::new(message, TextStyle{
+                    font: game_font.0.clone_weak(),
+                    font_size: tile_size.0 / 4.0,
+                    color: Color::BLACK.into(),
+                }));
             }
             _ => {}
         }

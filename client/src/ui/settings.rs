@@ -290,10 +290,6 @@ fn setup_settings_ui(
                                         color: Color::WHITE.into(),
                                     },
                                 )
-                                .with_style(Style {
-                                    margin: UiRect { ..default() },
-                                    ..default()
-                                })
                                 .with_text_alignment(TextAlignment::CENTER),
                             );
                         });

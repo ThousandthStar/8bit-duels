@@ -23,7 +23,7 @@ pub mod debug;
 use animations::AnimationPlugin;
 use audio::GameAudioPlugin;
 use card_interactions::CardInteractions;
-use common::card::Card;
+use common::card::{Card, CardNameToSprite};
 use net::packet_handler::PacketHandlerPlugin;
 use opening::OpeningPlugin;
 use ownership_indicator::OwnershipIndicatorPlugin;
@@ -59,6 +59,7 @@ pub struct DevMode(bool);
 pub fn main() {
     App::new()
         .insert_resource(CardCollection::new())
+        .insert_resource(CardNameToSprite::default())
         .insert_resource(IsSelfTurn(false))
         .insert_resource(IsPlayer1(false))
         .add_plugins(
@@ -90,6 +91,7 @@ pub fn main() {
         .add_plugin(DebugPlugin)
         .add_startup_system(spawn_camera)
         .add_plugin(AnimationPlugin)
+        .insert_resource(ClearColor(Color::BLACK))
         .run();
 }
 
