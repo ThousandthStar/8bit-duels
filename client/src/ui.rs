@@ -1,6 +1,7 @@
-use bevy::{input::keyboard::KeyboardInput, prelude::*};
-use bevy_egui::{egui, EguiContext};
-use bevy_kira_audio::prelude::*;
+use belly::{prelude::*, widgets::input::button::BtnEvent};
+use bevy::prelude::*;
+use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
     card_interactions::{self, is_in_boundary, SelectedCardEntity, ViewingCardEntity},
@@ -19,12 +20,10 @@ use std::time::Duration;
 pub mod before_game;
 pub mod in_game_ui;
 pub mod settings;
-pub mod widgets;
 
 use before_game::BeforeGamePlugin;
 use in_game_ui::InGameUiPlugin;
 use settings::{Settings, SettingsUiPlugin};
-use widgets::WidgetPlugin;
 
 pub struct UiPlugin;
 
@@ -34,7 +33,11 @@ impl Plugin for UiPlugin {
             .add_system_set(SystemSet::on_enter(GameState::Waiting).with_system(build_ui))
             .add_system_set(SystemSet::on_exit(GameState::Waiting).with_system(destroy_ui))
             .add_startup_system_to_stage(StartupStage::PostStartup, setup_main_menu)
-            .add_system_set(SystemSet::on_update(GameState::Waiting).with_system(main_menu_buttons))
+            .add_system_set(
+                SystemSet::on_update(GameState::Waiting)
+                    .with_system(main_menu_buttons)
+                    .after(show_main_menu_elements),
+            )
             .add_system_set(SystemSet::on_exit(GameState::Waiting).with_system(remove_bg_image))
             .add_system_set(
                 SystemSet::on_enter(GameState::Waiting).with_system(show_main_menu_elements),
@@ -47,10 +50,14 @@ impl Plugin for UiPlugin {
             .add_startup_system(|mut commands: Commands, asset_server: Res<AssetServer>| {
                 commands.insert_resource(GameFont(asset_server.load("Monocraft.otf")));
             })
+            .add_startup_system(|mut commands: Commands| {
+                commands.add(StyleSheet::load("stylesheet.ess"))
+            })
             .insert_resource(ShowMenu(false))
+            .add_plugin(EguiPlugin)
             .add_plugin(InGameUiPlugin)
-            .add_plugin(WidgetPlugin)
             .add_plugin(BeforeGamePlugin)
+            .add_plugin(BellyPlugin)
             .add_plugin(SettingsUiPlugin);
     }
 }
@@ -64,9 +71,6 @@ pub struct UiBackgroundImage {
 
 #[derive(Resource)]
 struct ShowMenu(bool);
-
-#[derive(Component)]
-struct ConnectionErrorText;
 
 #[derive(Resource)]
 pub struct GameFont(pub Handle<Font>);
@@ -93,65 +97,16 @@ pub fn destroy_ui(
 fn show_main_menu_elements(
     mut query_sprite: Query<&mut Visibility, With<UiBackgroundImage>>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     tile_size: Res<TileSize>,
-    game_font: Res<GameFont>,
 ) {
-    commands
-        .spawn(NodeBundle {
-            style: Style {
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            ..default()
-        })
-        .with_children(|parent| {
-            parent
-                .spawn(
-                    TextBundle::from_section(
-                        "8bit Duels",
-                        TextStyle {
-                            font: game_font.0.clone_weak(),
-                            font_size: tile_size.0 / 2.0,
-                            color: Color::BLACK,
-                        },
-                    )
-                    .with_style(Style {
-                        position: UiRect::new(
-                            Val::Percent(5.0),
-                            Val::Auto,
-                            Val::Percent(2.0),
-                            Val::Auto,
-                        ),
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
-                        ..default()
-                    }),
-                )
-                .insert(StartIndicator)
-                .with_children(|parent| {
-                    parent.spawn(
-                        TextBundle::from_section(
-                            "Press Space!",
-                            TextStyle {
-                                font: game_font.0.clone_weak(),
-                                font_size: tile_size.0 / 4.0,
-                                color: Color::BLACK,
-                            },
-                        )
-                        .with_style(Style {
-                            position: UiRect::new(
-                                Val::Auto,
-                                Val::Auto,
-                                Val::Px(tile_size.0 / 1.5),
-                                Val::Auto,
-                            ),
-                            ..default()
-                        }),
-                    );
-                });
-        });
-
+    let big_text_font_size = tile_size.0 / 2.0;
+    let small_text_font_size = tile_size.0 / 4.0;
+    commands.add(eml! {
+        <div s:justify-content="center" c:start-text>
+            <label s:font-size=big_text_font_size c:game-name-text value="8bit Duels"></label>
+            <label s:font-size=small_text_font_size c:press-space-text value="Press Space!"></label>
+        </div>
+    });
     let mut visibility = query_sprite.single_mut();
     visibility.is_visible = true;
 }
@@ -159,14 +114,6 @@ fn show_main_menu_elements(
 fn remove_bg_image(mut query: Query<&mut Visibility, With<UiBackgroundImage>>) {
     query.single_mut().is_visible = false;
 }
-
-//marker components
-#[derive(Component)]
-struct StartIndicator;
-#[derive(Component)]
-struct PlayButton;
-#[derive(Component)]
-struct SettingsButton;
 
 fn setup_main_menu(
     mut commands: Commands,
@@ -202,12 +149,10 @@ fn waiting_ui(
     mut commands: Commands,
     time: Res<Time>,
     mut back_img_q: Query<(&mut Handle<Image>, &mut UiBackgroundImage)>,
-    mut start_indicator_q: Query<Entity, With<StartIndicator>>,
+    mut elements: Elements,
     mut show_menu: ResMut<ShowMenu>,
     tile_size: Res<TileSize>,
     keys: Res<Input<KeyCode>>,
-    asset_server: Res<AssetServer>,
-    game_font: Res<GameFont>,
 ) {
     let (mut img, mut img_settings) = back_img_q.single_mut();
     img_settings.timer.tick(time.delta() / 2);
@@ -222,139 +167,62 @@ fn waiting_ui(
 
     if keys.just_pressed(KeyCode::Space) && !show_menu.0 {
         show_menu.0 = true;
-        commands
-            .spawn(NodeBundle {
-                style: Style {
-                    size: Size::new(Val::Percent(40.0), Val::Percent(45.0)),
-                    position: UiRect::new(
-                        Val::Percent(30.0),
-                        Val::Auto,
-                        Val::Percent(27.5),
-                        Val::Auto,
-                    ),
-                    ..default()
-                },
-                ..default()
-            })
-            .with_children(|parent| {
-                parent
-                    .spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect::new(
-                                Val::Percent(10.),
-                                Val::Auto,
-                                Val::Percent(10.),
-                                Val::Auto,
-                            ),
-                            align_content: AlignContent::Center,
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Percent(80.), Val::Percent(30.0)),
-                            ..default()
-                        },
-                        image: UiImage(asset_server.load("button.png")),
-                        ..default()
-                    })
-                    .insert(PlayButton)
-                    .with_children(|parent| {
-                        parent.spawn(TextBundle::from_section(
-                            "Play",
-                            TextStyle {
-                                font: game_font.0.clone_weak(),
-                                font_size: tile_size.0 / 2.5,
-                                color: Color::WHITE,
-                            },
-                        ));
-                    });
-                parent
-                    .spawn(ButtonBundle {
-                        style: Style {
-                            position: UiRect::new(
-                                Val::Percent(10.),
-                                Val::Auto,
-                                Val::Percent(60.),
-                                Val::Auto,
-                            ),
-                            align_content: AlignContent::Center,
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            position_type: PositionType::Absolute,
-                            size: Size::new(Val::Percent(80.), Val::Percent(30.0)),
-                            ..default()
-                        },
-                        image: UiImage(asset_server.load("button.png")),
-                        ..default()
-                    })
-                    .insert(SettingsButton)
-                    .with_children(|parent| {
-                        parent.spawn(TextBundle::from_section(
-                            "Settings",
-                            TextStyle {
-                                font: game_font.0.clone_weak(),
-                                font_size: tile_size.0 / 2.5,
-                                color: Color::WHITE,
-                            },
-                        ));
-                    });
-                parent
-                    .spawn(
-                        TextBundle::from_section(
-                            "Could not connect to the server!",
-                            TextStyle {
-                                font: game_font.0.clone_weak(),
-                                font_size: tile_size.0 / 3.5,
-                                color: Color::BLACK,
-                            },
-                        )
-                        .with_style(Style {
-                            position: UiRect {
-                                bottom: Val::Px(0.0),
-                                ..default()
-                            },
-                            position_type: PositionType::Absolute,
-                            ..Default::default()
-                        }),
-                    )
-                    .insert(Visibility::INVISIBLE)
-                    .insert(ConnectionErrorText);
-            });
-        commands
-            .entity(start_indicator_q.single())
-            .despawn_recursive();
+        let button_text_size = tile_size.0 / 2.5;
+        let connection_error_text_size = tile_size.0 / 3.5;
+        elements.select(".start-text").remove();
+        commands.add(eml! {
+            <body>
+                <div c:mm-center-box>
+                    <button c:mm-play-button id="play-button">
+                        <img src="button.png" mode="fit">
+                            <span s:font-size=button_text_size>"Play"</span>
+                        </img>
+                    </button>
+                    <button c:mm-settings-button id="settings-button">
+                        <img src="button.png" mode="fit">
+                            <span s:font-size=button_text_size>"Settings"</span>
+                        </img>
+                    </button>
+                    <label value="Could not connect to the server!"
+                        s:font-size=connection_error_text_size
+                        c:conn-err-text
+                        c:hidden>
+                    </label>
+                </div>
+            </body>
+        });
     }
 }
 
 fn main_menu_buttons(
     mut state: ResMut<State<GameState>>,
-    mut query: Query<(&Interaction, Option<&PlayButton>, Option<&SettingsButton>)>,
-    mut conneciton_refused_text: Query<
-        (&mut Visibility, Option<&ConnectionErrorText>),
-        Without<Interaction>,
-    >,
     settings: Res<Settings>,
     mut commands: Commands,
+    mut elements: Elements,
+    mut reader: EventReader<BtnEvent>,
 ) {
-    for (interaction, play_btn_opt, settings_btn_opt) in query.iter_mut() {
-        match *interaction {
-            Interaction::Clicked => {
-                if play_btn_opt.is_some() {
-                    match net::init(&mut commands, &settings.server_addr) {
-                        Ok(_) => {
-                            state.set(GameState::PreparingForGame).unwrap();
-                        }
-                        Err(e) => {
-                            for (mut visibility, opt) in conneciton_refused_text.iter_mut() {
-                                if opt.is_some() {
-                                    visibility.is_visible = true;
-                                }
+    for event in reader.iter() {
+        match *event {
+            BtnEvent::Pressed(entity) => {
+                if let Some(play_btn_ent) = elements.select("#play-button").entities().get(0) {
+                    if play_btn_ent == &entity {
+                        match net::init(&mut commands, &settings.server_addr) {
+                            Ok(_) => {
+                                state.set(GameState::PreparingForGame).unwrap();
                             }
-                            bevy::log::error!("Could not connect to the server: {}", e);
+                            Err(e) => {
+                                elements.select(".conn-err-text").remove_class("hidden");
+                                bevy::log::error!("Could not connect to the server: {}", e);
+                            }
                         }
                     }
                 }
-                if settings_btn_opt.is_some() {
-                    state.set(GameState::Settings).unwrap();
+                if let Some(settings_btn_ent) =
+                    elements.select("#settings-button").entities().get(0)
+                {
+                    if settings_btn_ent == &entity {
+                        state.set(GameState::Settings).unwrap();
+                    }
                 }
             }
             _ => {}

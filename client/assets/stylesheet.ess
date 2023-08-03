@@ -1,0 +1,127 @@
+* {
+  font: "monocraft.otf"
+}
+body {
+  width: 100%;
+  height: 100%;
+}
+.mm-center-box{
+  width: 40%;
+  height: 45%;
+  left: 30%;
+  top: 27.5%;
+  position-type: absolute;
+}
+.mm-play-button {
+  left: 10%;
+  width: 80%;
+  height: 30%;
+  top: 10%;
+}
+.mm-settings-button{
+  top: 60%;
+  position-type: absolute;
+  left: 10%;
+  width: 80%;
+  height: 30%;
+}
+img {
+  width: 100%;
+  height: 100%;
+}
+span{
+  font: "monocraft.otf";
+  color: white;
+  margin: auto ;
+}
+.mm-play-button-img{
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+}
+.game-name-text {
+  color: black;
+  left: 5%; 
+  top: 2%;
+  justify-content: center;
+  align-content: center;
+  position-type: absolute;
+}
+.press-space-text{
+  top: 10%;
+  left: 5%;
+  position-type: absolute;
+  color: black;
+}
+.conn-err-text{
+  color: black;
+  position-type: absolute;
+  bottom: 0px;
+}
+.hidden{
+  display: none;
+}
+.s-container {
+  width: 100%;
+  height: 100%;
+}
+.s-left-column{
+  width: 35%;
+  height: 90%;
+  left: 10%;
+  top: 5%;
+  position-type: absolute;
+}
+.s-right-column{
+  width: 35%;
+  height: 90%;
+  left: 55%;
+  top: 5%;
+  position-type: absolute;
+}
+.s-top-text{
+  color: black;
+}
+.s-username-tb-img{
+  top: 5%;
+  width: 100%;
+  height: 10%;
+  position-type: absolute;
+}
+.s-second-text{
+  color: black;
+  position-type: absolute;
+  top: 17.5%;
+}
+.s-server-addr-tb-img{
+  top: 22%;
+  width: 100%;
+  height: 10%;
+  position-type: absolute;
+}
+textinput{
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 5%;
+}
+.s-bottom-button {
+  position-type: absolute;
+  bottom: 5%;
+}
+.s-saved-indicator{
+  color: red;
+  bottom: 0px;
+  position-type: absolute;
+}
+.s-debug-mode-switch{
+  position-type: absolute;
+  top: 5%;
+}
+
+
+
+
+
+

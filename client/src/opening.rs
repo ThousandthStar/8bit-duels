@@ -106,7 +106,7 @@ fn spawn_opening(
                 .insert(ParentNode)
                 .with_children(|parent| {
                     let mut bundle = TextBundle::from_section(
-                        "ThousandthStar",
+                        "ThousandthStar Games",
                         TextStyle {
                             color: Color::rgba(1.0, 1.0, 1.0, 0.0),
                             font: game_font.0.clone_weak(),
@@ -114,16 +114,6 @@ fn spawn_opening(
                         },
                     )
                     .with_text_alignment(TextAlignment::CENTER);
-                    bundle.style = Style { ..default() };
-                    parent.spawn(bundle);
-                    bundle = TextBundle::from_section(
-                        "Games",
-                        TextStyle {
-                            color: Color::rgba(1.0, 1.0, 1.0, 0.0),
-                            font: game_font.0.clone_weak(),
-                            font_size: height / 30.0,
-                        },
-                    );
                     bundle.style = Style {
                         position: UiRect::new(
                             Val::Auto,

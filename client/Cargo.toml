@@ -12,10 +12,11 @@ harness = false
 default = ["bevy/animation", "bevy/bevy_asset", "bevy/bevy_scene", "bevy/bevy_winit", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_gltf", "bevy/bevy_render", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/png", "bevy/hdr", "bevy/zstd", "bevy/x11", "bevy/ktx2", "bevy/filesystem_watcher"]
 
 [dependencies]
-bevy = {version="0.9.0", default-features=false}
-bevy_egui = "0.17.0"
+bevy = {version="0.9.1", default-features=false}
+bevy_egui = "0.19.0"
 bevy_kira_audio={version="0.14", features=["mp3"], default-features=false}
-bevy-inspector-egui = "0.14"
+bevy-inspector-egui = "0.17"
+belly = { git = "https://github.com/ThousandthStar/belly-no-button-color" }
 serde = "1.0.144"
 serde_json = "1.0.83"
 byteorder = "1"
