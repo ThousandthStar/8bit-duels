@@ -1,11 +1,11 @@
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
-use bevy_egui::EguiPlugin;
+
 use bevy_kira_audio::AudioPlugin;
 use common::card::CardCollection;
 use currency::CurrencyPlugin;
-use serde::{Deserialize, Serialize};
-use serde_json;
-use std::fs;
+
+
+
 
 pub mod animations;
 pub mod audio;

@@ -2,7 +2,6 @@ use std::{
     collections::VecDeque,
     io::Write,
     net::TcpStream,
-    panic,
     sync::{Arc, Mutex},
     thread,
 };

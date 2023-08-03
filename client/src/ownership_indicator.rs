@@ -1,6 +1,5 @@
 use crate::{
     animations::{AttackAnimation, MovementAnimation},
-    tilemap::TileSize,
 };
 use bevy::prelude::*;
 use common::card::CardEntity;
@@ -18,7 +17,7 @@ impl Plugin for OwnershipIndicatorPlugin {
 pub struct OwnershipIndicator;
 
 fn update(
-    mut card_entity_q: Query<
+    card_entity_q: Query<
         (
             &Children,
             Option<&MovementAnimation>,

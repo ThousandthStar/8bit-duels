@@ -5,9 +5,8 @@ pub(crate) mod packet_handler;
 use std::{
     collections::VecDeque,
     error::Error,
-    io::{self, BufReader},
+    io::{BufReader},
     net::TcpStream,
-    result,
     sync::{Arc, Mutex},
 };
 

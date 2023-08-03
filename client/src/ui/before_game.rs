@@ -1,5 +1,5 @@
 use super::*;
-use bevy::prelude::*;
+
 
 pub struct BeforeGamePlugin;
 
@@ -111,7 +111,7 @@ fn update_waiting_text(mut query: Query<(&mut WaitingText, &mut Text)>, time: Re
 
 fn send_deck_packet(
     settings: Res<Settings>,
-    mut queue_out: ResMut<QueueOut>,
+    queue_out: ResMut<QueueOut>,
     mut commands: Commands,
 ) {
     queue_out

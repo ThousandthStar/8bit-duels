@@ -73,7 +73,7 @@ fn exit_opening(node_query: Query<Entity, With<Node>>, mut commands: Commands) {
 fn spawn_opening(
     mut commands: Commands,
     windows: Res<Windows>,
-    asset_server: Res<AssetServer>,
+    _asset_server: Res<AssetServer>,
     game_font: Res<GameFont>,
 ) {
     let window = windows.get_primary().unwrap();

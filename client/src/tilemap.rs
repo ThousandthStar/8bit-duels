@@ -33,7 +33,7 @@ impl Plugin for TilemapPlugin {
 }
 
 fn add_tile_size_res(mut commands: Commands, windows: Res<Windows>, settings: Res<Settings>) {
-    let window = windows.get_primary().unwrap();
+    let _window = windows.get_primary().unwrap();
     commands.insert_resource(TileSize(settings.window_scale as f32 * 20.0));
 }
 
@@ -73,7 +73,7 @@ fn position_sprites(
     )>,
     windows: Res<Windows>,
     tile_size: Res<TileSize>,
-    is_player_1: Res<IsPlayer1>,
+    _is_player_1: Res<IsPlayer1>,
     mut commands: Commands,
 ) {
     let window = windows.get_primary().unwrap();
@@ -81,7 +81,7 @@ fn position_sprites(
     let start_y = (window.height() / 2.) - (tile_size.0 / 2.);
     let start_x = (-window.width() / 2.) + (tile_size.0 / 2.) + (window.width() / 3.);
 
-    for (entity, mut transform, card_entity, instant_move_opt, move_anim_opt, atck_anim_opt) in
+    for (entity, mut transform, card_entity, instant_move_opt, _move_anim_opt, atck_anim_opt) in
         query.iter_mut()
     {
         transform.translation.z = 500.;

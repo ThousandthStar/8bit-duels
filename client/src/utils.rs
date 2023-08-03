@@ -27,7 +27,7 @@ pub fn screen_to_world_position(
 
 // found here: https://answers.unity.com/questions/414829/any-one-know-maths-behind-this-movetowards-functio.html
 // and adapted for Rust and Bevy
-pub fn move_towards(current: Vec2, target: Vec2, speed: f32, delta_time: f32) -> Vec2 {
+pub fn move_towards(current: Vec2, target: Vec2, speed: f32, _delta_time: f32) -> Vec2 {
     let d = target - current;
     let magnitude = (d.x.powi(2) + d.y.powi(2)).sqrt();
     if magnitude <= 10.0 || magnitude == 0.0 {

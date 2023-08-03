@@ -1,11 +1,10 @@
-use super::{QueueIn, QueueOut};
+use super::{QueueIn};
 use crate::{
     animations::AttackAnimation,
-    card_interactions::is_in_boundary,
     currency::{Pawns, Spirits},
     ownership_indicator::OwnershipIndicator,
     tilemap::{self, CardSprites, TileSize},
-    ui::{in_game_ui::{ChatMessages, ChatText}, GameFont},
+    ui::{in_game_ui::{ChatText}, GameFont},
     GameState, IsPlayer1, IsSelfTurn,
 };
 use bevy::prelude::*;
@@ -26,7 +25,7 @@ impl Plugin for PacketHandlerPlugin {
 }
 
 fn handle_packets(
-    mut queue_in: ResMut<QueueIn>,
+    queue_in: ResMut<QueueIn>,
     mut commands: Commands,
     mut state: ResMut<State<GameState>>,
     card_sprites: Res<CardSprites>,
@@ -103,7 +102,7 @@ fn handle_packets(
             ServerMessage::AttackTroop(start_x, start_y, end_x, end_y) => {
                 let mut attacker: Option<(Entity, Mut<CardEntity>, &Transform)> = None;
                 let mut attacked: Option<(Entity, Mut<CardEntity>, &Transform)> = None;
-                for (entity, mut card_entity, transform) in card_entity_q.iter_mut() {
+                for (entity, card_entity, transform) in card_entity_q.iter_mut() {
                     if card_entity.clone().get_x_pos() == start_x
                         && card_entity.clone().get_y_pos() == start_y
                     {
@@ -154,7 +153,7 @@ fn handle_packets(
                 }
                 spirit_count.0 += 1;
             }
-            ServerMessage::EndGame(won) => {
+            ServerMessage::EndGame(_won) => {
                 for (entity, _, _) in card_entity_q.iter() {
                     commands.entity(entity).despawn();
                 }

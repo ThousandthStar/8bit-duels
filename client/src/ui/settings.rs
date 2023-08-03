@@ -4,7 +4,7 @@ use std::{error::Error, fs, path::Path};
 use crate::DevMode;
 
 use super::*;
-use bevy_pkv::PkvStore;
+
 use serde::{Deserialize, Serialize};
 
 pub struct SettingsUiPlugin;
@@ -94,7 +94,7 @@ fn write_settings_to_file(settings: &Settings) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn update_window_scale(mut windows: ResMut<Windows>, settings: Res<Settings>) {
-    let mut window = windows.get_primary_mut().unwrap();
+    let window = windows.get_primary_mut().unwrap();
     window.set_resolution(
         300.0 * settings.window_scale as f32,
         180.0 * settings.window_scale as f32,

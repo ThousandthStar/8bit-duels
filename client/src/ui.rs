@@ -4,7 +4,7 @@ use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
-    card_interactions::{self, is_in_boundary, SelectedCardEntity, ViewingCardEntity},
+    card_interactions::{ViewingCardEntity},
     currency::{Pawns, Spirits},
     net::{self, QueueOut},
     tilemap::{CardSprites, Tile, TileSize},
@@ -12,7 +12,7 @@ use crate::{
 };
 
 use common::{
-    card::{Card, CardCollection},
+    card::{Card},
     messages::ClientMessage,
 };
 use std::time::Duration;

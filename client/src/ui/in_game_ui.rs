@@ -37,12 +37,12 @@ fn spawn_in_game_ui(
     game_font: Res<GameFont>,
     tile_size: Res<TileSize>,
     asset_server: Res<AssetServer>,
-    card_sprites: Res<CardSprites>,
+    _card_sprites: Res<CardSprites>,
     deck: Res<Deck>,
     card_name_to_sprite: Res<CardNameToSprite>,
     is_self_turn: Res<IsSelfTurn>,
-    spirit_count: Res<Spirits>,
-    pawn_count: Res<Pawns>,
+    _spirit_count: Res<Spirits>,
+    _pawn_count: Res<Pawns>,
 ) {
     // left panel
     commands
@@ -367,7 +367,7 @@ fn spawn_in_game_ui(
 fn in_game_ui(
     mut context: ResMut<EguiContext>,
     selected_card: Res<ViewingCardEntity>,
-    mut queue_out: ResMut<QueueOut>,
+    queue_out: ResMut<QueueOut>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     deck: Res<Deck>,
     spirit_count: Res<Spirits>,
@@ -502,7 +502,7 @@ fn in_game_ui(
 }
 
 fn placing_troop(
-    mut queue_out: ResMut<QueueOut>,
+    queue_out: ResMut<QueueOut>,
     mut placing_query: Query<
         (Entity, Option<&CurrentlyPlacingCard>, &mut Transform),
         Without<Camera>,

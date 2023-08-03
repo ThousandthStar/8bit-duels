@@ -73,7 +73,7 @@ fn card_selecting_system(
         ),
     >,
 ) {
-    for (transform, mut card_entity) in card_entity_q.iter_mut() {
+    for (transform, card_entity) in card_entity_q.iter_mut() {
         if is_transform_clicked(transform, &mouse, &windows, &tile_size, &cam_q) {
             match selected_card_entity.0.clone() {
                 Some(selected_card) => {
@@ -205,7 +205,7 @@ fn setting_indicators_system(
 }
 
 fn card_interactions_system(
-    mut queue_out: ResMut<QueueOut>,
+    queue_out: ResMut<QueueOut>,
     mut selected_card_entity: ResMut<SelectedCardEntity>,
     move_indicator_q: Query<
         (&MoveIndicator, &Visibility, &Transform),
