@@ -182,7 +182,7 @@ impl CardEntity {
     }
 
     pub fn attacked(&mut self) {
-        let mut card = &mut self.card;
+        let card = &mut self.card;
         for ability in card.get_abilities_mut() {
             if let CardAbility::MultiAttack {
                 ref mut max_attacks,
@@ -208,7 +208,7 @@ impl CardEntity {
         if self.stun_count > 0 {
             self.stun_count -= 1;
         }
-        let mut card = &mut self.card;
+        let card = &mut self.card;
         for ability in card.get_abilities_mut() {
             if let CardAbility::MultiAttack {
                 max_attacks: _,
