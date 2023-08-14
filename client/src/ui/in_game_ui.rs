@@ -31,6 +31,17 @@ struct ChatSendButton;
 pub struct ChatText;
 #[derive(Component)]
 struct ChatTextBox;
+#[derive(Component)]
+struct CardButton{
+    card: Card
+}
+
+struct UiCardElement{
+    card_button_ent: Entity,
+    card: Card,
+    name: String,
+    troop_img: Handle<Image>,
+}
 
 fn spawn_in_game_ui(
     mut commands: Commands,
@@ -43,8 +54,84 @@ fn spawn_in_game_ui(
     is_self_turn: Res<IsSelfTurn>,
     _spirit_count: Res<Spirits>,
     _pawn_count: Res<Pawns>,
+    mut elements: Elements,
 ) {
-    // left panel
+    let button_handle: Handle<Image> = asset_server.load("button.png");
+    let ui_card_bg_button: Handle<Image> = asset_server.load("ui_card_bg_button.png");
+    let tile_size = tile_size.0;
+    let text_size = tile_size / 4.5;
+    let mut ui_card_button_elem_list: Vec<UiCardElement> = Vec::new();
+
+    for i in 0..5{
+
+        let card = deck.0.get(4 - i).unwrap().clone();
+        let card_button_ent = commands.spawn_empty().insert(CardButton{ card: card.clone()}).id();
+        let temp = &card.get_name();
+        let mut chars: Vec<char> = temp.chars().collect();
+        chars[0] = chars[0].to_uppercase().nth(0).unwrap();
+        let name: String = chars.into_iter().collect();
+        let troop_img: Handle<Image> = asset_server
+            .load(format!(
+                "troop_{}.png",
+                card_name_to_sprite
+                    .0
+                    .get(&deck.0.get(4 - i).unwrap().get_name())
+                    .unwrap()
+        ));
+        ui_card_button_elem_list.push(UiCardElement { card_button_ent, name, troop_img, card: card.clone() });
+    }
+
+    commands.add(
+        eml!{
+            <body>
+                <div id="left-panel">
+                    /*
+                    <label id="turn-label"></label>
+                    <button>
+                        <img>
+                            <span>
+                                "End Turn"
+                            </span>
+                        </img>
+                    </button>
+                    */
+                    <for i in = ui_card_button_elem_list.iter().zip(0..5)> 
+                        <div 
+                            s:height=format!("{}px", tile_size * 1.2) 
+                            s:margin=format!("{}px", tile_size / 5.0)
+                            s:bottom=format!("{}px", i.1 as f32 * tile_size * 1.2)
+                            c:ig-cell
+                        >
+                            <div c:ig-cell-text-div>
+                                <label 
+                                    value=format!("{} [{} Spirits]", i.0.name, i.0.card.get_cost())
+                                    s:font-size=text_size
+                                    s:color="black">
+                                </label>
+                            </div>
+                            
+                            <div 
+                                c:ig-cell-img-div
+                                s:height=format!("{}px", tile_size)
+                                s:width=format!("{}px", tile_size)
+                            >
+                                <button c:ig-cell-button {i.0.card_button_ent}>
+                                    <img mode="fit" src=ui_card_bg_button.clone()>
+                                        <img mode="fit" src=i.0.troop_img.clone() c:ig-cell-troop-img-div>
+                                        </img>
+                                    </img>
+                                </button>
+                            </div>
+                        </div>
+                    </for>
+                </div>
+                <div id="right-panel">
+                </div>
+            </body>
+        }
+    );
+    /* left panel
+    
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -362,6 +449,7 @@ fn spawn_in_game_ui(
                         .insert(ChatSendButton);
                 });
         });
+    */
 }
 
 fn in_game_ui(
