@@ -161,7 +161,51 @@ textinput{
   width: 100%;
   height: 100%;
 }
-
+#end-turn-button{
+  position-type: absolute;
+  top: 9%;
+  left: 5%;
+}
+#turn-label{
+  margin: 5%;
+  color: black;
+}
+.shown{
+  display: flex;
+}
+#currency-indicator-section{
+  position-type: absolute;
+  top: 20%;
+  left: 5%;
+  height: 15%;
+  width: 90%;
+}
+.indicator-label{
+  margin-top: auto;
+  margin-bottom: auto;
+  color: black;
+  position-type: absolute;
+}
+#card-viewing-div{
+  height: 35%;
+  position-type: absolute;
+  left: 2.5%;
+  top: 2.5%;
+  width: 95%;
+}
+#chat-div{
+  height: 55%;
+  position-type: absolute;
+  top: 40%;
+  left: 2.5%;
+  width: 95%;
+}
+#chat-area{
+  height: 70%;
+  width: 100%;
+  position-type: absolute;
+  top: 10%;
+}
 
 
 

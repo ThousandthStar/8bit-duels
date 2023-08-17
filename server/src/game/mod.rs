@@ -107,7 +107,7 @@ impl Game {
                     let mut index_list: Vec<usize> = Vec::new();
                     for (index, packet) in queue_guard_2.iter().enumerate() {
                         if let ClientMessage::ChatMessage(message) = packet {
-                            if message.len() > 30{
+                            if message.len() > 20{
                                 continue;
                             }
                             let message = &message.censor();
@@ -229,15 +229,15 @@ impl Game {
                                         out_1.lock().unwrap().write_packet(ServerMessage::StartTurn);
                                     }
                                     is_player_1_turn = !is_player_1_turn;
-                                    for mut arr in &mut game_board {
-                                       for mut option in arr{
+                                    for arr in &mut game_board {
+                                       for option in arr{
                                            if option.is_some() {
                                                option.as_mut().unwrap().reset();
                                            }
                                        }
                                     }
                                 },
-                                ClientMessage::SpawnCard(card, mut x, mut y) => {
+                                ClientMessage::SpawnCard(card, x, y) => {
                                     if x > 4 || x < 0 || y > 8 || y < 0 {return;}
                                     if is_player_1_turn{
                                         if player_1_pawns < 1 || player_1_spirits < card.get_cost() {
@@ -289,11 +289,11 @@ impl Game {
                                     }
                                 }
                                 ClientMessage::ChatMessage(message) => {
-                                    if message.len() > 30{
+                                    if message.len() > 20{
                                         continue;
                                     }
                                     let message = &message.censor();
-                                    let final_message = if is_player_1_turn { p2_username.clone() } else { p1_username.clone() } + ": " + &message;
+                                    let final_message = if is_player_1_turn { p1_username.clone() } else { p2_username.clone() } + ": " + &message;
                                     out_1.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message.clone()));
                                     out_2.lock().unwrap().write_packet(ServerMessage::ChatMessage(final_message));
                                 }

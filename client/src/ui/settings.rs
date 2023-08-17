@@ -15,6 +15,7 @@ impl Plugin for SettingsUiPlugin {
         match load_settings_from_file() {
             Ok(loaded_settings) => {
                 settings = loaded_settings;
+                println!("{}", settings.username);
             }
             Err(e) => {
                 error!("Critical error loading config: {}", e);

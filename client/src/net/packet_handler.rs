@@ -1,12 +1,13 @@
-use super::{QueueIn};
+use super::QueueIn;
 use crate::{
     animations::AttackAnimation,
     currency::{Pawns, Spirits},
     ownership_indicator::OwnershipIndicator,
     tilemap::{self, CardSprites, TileSize},
-    ui::{in_game_ui::{ChatText}, GameFont},
+    ui::{in_game_ui::TurnIndicator, GameFont},
     GameState, IsPlayer1, IsSelfTurn,
 };
+use belly::prelude::*;
 use bevy::prelude::*;
 use common::{
     card::{CardAbility, CardEntity},
@@ -20,9 +21,13 @@ impl Plugin for PacketHandlerPlugin {
         app.add_system_set(
             SystemSet::on_update(GameState::PreparingForGame).with_system(handle_packets),
         )
+        .insert_resource(ChatMessages(Vec::new()))
         .add_system_set(SystemSet::on_update(GameState::Playing).with_system(handle_packets));
     }
 }
+
+#[derive(Resource, Clone)]
+pub struct ChatMessages(pub Vec<String>);
 
 fn handle_packets(
     queue_in: ResMut<QueueIn>,
@@ -31,13 +36,16 @@ fn handle_packets(
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
     mut card_entity_q: Query<(Entity, &mut CardEntity, &Transform)>,
-    mut visible_q: Query<&mut Visibility, (Without<CardEntity>, Without<ChatText>)>,
+    mut visible_q: Query<&mut Visibility, (Without<CardEntity>, Without<Label>)>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
     mut pawn_count: ResMut<Pawns>,
     mut spirit_count: ResMut<Spirits>,
-    mut chat_text_q: Query<(&mut Visibility, &mut Text), (With<ChatText>, Without<CardEntity>)>,
+    mut turn_label_q: Query<&mut Label, (With<TurnIndicator>, Without<CardEntity>)>,
     game_font: Res<GameFont>,
+    mut elements: Elements,
+    asset_server: Res<AssetServer>,
+    mut messages: ResMut<ChatMessages>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
     if let Some(message) = guard.pop_front() {
@@ -50,7 +58,7 @@ fn handle_packets(
                     is_self_turn.0 = false;
                     is_player_1_res.0 = false;
                 }
-                state.set(GameState::Playing);
+                state.set(GameState::Playing).unwrap();
             }
             ServerMessage::SpawnCard(card_entity) => {
                 let mut sprite = TextureAtlasSprite::new(
@@ -152,6 +160,25 @@ fn handle_packets(
                     }
                 }
                 spirit_count.0 += 1;
+                if is_self_turn.0 {
+                    let button_handle: Handle<Image> = asset_server.load("button.png");
+                    let tile_size = tile_size.0;
+                    elements.select("#left-panel").add_child(eml! {
+                        <button
+                            id="end-turn-button"
+                            s:width=format!("{}px", tile_size * 3.6)
+                            s:height=format!("{}px", tile_size * 0.9)
+                        >
+                            <img src=button_handle mode="fit">
+                                <span s:font-size=format!("{}", tile_size / 4.0)>
+                                    "End Turn"
+                                </span>
+                            </img>
+                        </button>
+
+                    });
+                }
+                turn_label_q.single_mut().value = "Your Turn".to_string();
             }
             ServerMessage::EndGame(_won) => {
                 for (entity, _, _) in card_entity_q.iter() {
@@ -159,20 +186,29 @@ fn handle_packets(
                 }
                 for mut visibility in visible_q.iter_mut() {
                     visibility.is_visible = false;
-                    let (mut visibility, _) = chat_text_q.single_mut();
-                    visibility.is_visible = false;
                 }
-                state.set(GameState::Waiting);
+                state.set(GameState::Waiting).unwrap();
             }
             ServerMessage::ChatMessage(message) => {
-                let (_, mut text) = chat_text_q.single_mut();
-                text.sections.push(TextSection::new(message, TextStyle{
-                    font: game_font.0.clone_weak(),
-                    font_size: tile_size.0 / 4.0,
-                    color: Color::BLACK.into(),
-                }));
+                messages.0.push(message.clone());
+                let tile_size = tile_size.0;
+                let mut entities = elements.select(".chat-message").entities();
+                while entities.len() > 8 {
+                    commands.entity(entities.remove(0)).despawn_recursive();
+                }
+                elements.select("#chat-area").add_child(eml! {
+                    <label
+                        s:color="black"
+                        value=message.clone().as_str()
+                        s:font-size=format!("{}", tile_size / 4.0)
+                        s:top="0px"
+                        s:width="90%"
+                        s:left="0%"
+                        c:chat-message
+                        >
+                    </label>
+                });
             }
-            _ => {}
         }
     }
 }
