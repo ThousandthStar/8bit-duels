@@ -24,7 +24,7 @@ fn spawn_stun_indicators(
 ) {
     for _ in 0..12 {
         commands
-            .spawn_bundle(SpriteBundle {
+            .spawn(SpriteBundle {
                 transform: Transform::from_xyz(0.0, 0.0, 425.0),
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(tile_size.0)),

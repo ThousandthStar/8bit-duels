@@ -39,6 +39,9 @@ span{
   align-items: center;
   align-content: center;
 }
+.start-text{
+  position-type: absolute;  
+}
 .game-name-text {
   color: black;
   left: 5%; 
@@ -206,7 +209,40 @@ textinput{
   position-type: absolute;
   top: 10%;
 }
-
+#current-card-label{
+  top: 0px;
+  left: 0px;
+  position-type: absolute;
+  color: black;
+}
+#current-card-damage{
+  top: 20%
+  left: 0px;
+  position-type: absolute;
+  color: black;
+}
+#current-card-hp{
+  top: 40%;
+  left: 0px;
+  position-type: absolute;
+  color: black;
+}
+#current-card-stunned{
+  top: 60%;
+  left: 0px;
+  position-type: absolute;
+  color: black;
+}
+#current-card-abilities{
+  top: 80%;
+  left: 0px;
+  position-type: absolute;
+  color: black;
+}
+#end-turn-button-span{
+  color: white;
+  margin: auto;
+}
 
 
 

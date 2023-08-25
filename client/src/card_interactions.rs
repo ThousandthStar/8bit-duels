@@ -1,3 +1,6 @@
+use std::rc::Rc;
+use std::sync::Arc;
+
 use crate::utils::screen_to_world_position;
 use crate::{net::QueueOut, tilemap::TileSize, GameState, IsPlayer1, IsSelfTurn, MainCamera};
 use bevy::prelude::*;
@@ -137,7 +140,7 @@ fn setting_indicators_system(
 ) {
     if selected_card_entity.0.is_some() {
         let selected_card_entity = selected_card_entity.0.clone().unwrap();
-        if selected_card_entity.stun_count > 0 {
+        if selected_card_entity.stun_count > 0 || selected_card_entity.get_y_pos() == 0 {
             return;
         }
 

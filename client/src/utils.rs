@@ -35,3 +35,9 @@ pub fn move_towards(current: Vec2, target: Vec2, speed: f32, _delta_time: f32) -
     }
     return current + d / magnitude * speed;
 }
+
+pub fn uppercase_first_letter(s: String) -> String {
+    let mut chars: Vec<char> = s.chars().collect();
+    chars[0] = chars[0].to_uppercase().nth(0).unwrap();
+    chars.into_iter().collect()
+}

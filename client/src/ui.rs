@@ -4,17 +4,14 @@ use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
-    card_interactions::{ViewingCardEntity},
+    card_interactions::ViewingCardEntity,
     currency::{Pawns, Spirits},
     net::{self, QueueOut},
     tilemap::{CardSprites, Tile, TileSize},
     utils, Deck, GameState, IsPlayer1, IsSelfTurn,
 };
 
-use common::{
-    card::{Card},
-    messages::ClientMessage,
-};
+use common::{card::Card, messages::ClientMessage};
 use std::time::Duration;
 
 pub mod before_game;
@@ -42,18 +39,12 @@ impl Plugin for UiPlugin {
             .add_system_set(
                 SystemSet::on_enter(GameState::Waiting).with_system(show_main_menu_elements),
             )
-            .add_system_set(SystemSet::on_enter(GameState::Waiting).with_system(
-                |mut show_menu: ResMut<ShowMenu>| {
-                    show_menu.0 = false;
-                },
-            ))
             .add_startup_system(|mut commands: Commands, asset_server: Res<AssetServer>| {
                 commands.insert_resource(GameFont(asset_server.load("Monocraft.otf")));
             })
             .add_startup_system(|mut commands: Commands| {
                 commands.add(StyleSheet::load("stylesheet.ess"))
             })
-            .insert_resource(ShowMenu(false))
             .add_plugin(EguiPlugin)
             .add_plugin(InGameUiPlugin)
             .add_plugin(BeforeGamePlugin)
@@ -68,9 +59,6 @@ pub struct UiBackgroundImage {
     index: usize,
     timer: Timer,
 }
-
-#[derive(Resource)]
-struct ShowMenu(bool);
 
 #[derive(Resource)]
 pub struct GameFont(pub Handle<Font>);
@@ -99,13 +87,28 @@ fn show_main_menu_elements(
     mut commands: Commands,
     tile_size: Res<TileSize>,
 ) {
-    let big_text_font_size = tile_size.0 / 2.0;
-    let small_text_font_size = tile_size.0 / 4.0;
+    let button_text_size = tile_size.0 / 2.5;
+    let connection_error_text_size = tile_size.0 / 3.5;
     commands.add(eml! {
-        <div s:justify-content="center" c:start-text>
-            <label s:font-size=big_text_font_size c:game-name-text value="8bit Duels"></label>
-            <label s:font-size=small_text_font_size c:press-space-text value="Press Space!"></label>
-        </div>
+        <body>
+            <div c:mm-center-box>
+                <button c:mm-play-button id="play-button">
+                    <img src="button.png" mode="fit">
+                        <span s:font-size=button_text_size>"Play"</span>
+                    </img>
+                </button>
+                <button c:mm-settings-button id="settings-button">
+                    <img src="button.png" mode="fit">
+                        <span s:font-size=button_text_size>"Settings"</span>
+                    </img>
+                </button>
+                <label value="Could not connect to the server!"
+                    s:font-size=connection_error_text_size
+                    c:conn-err-text
+                    c:hidden>
+                </label>
+            </div>
+        </body>
     });
     let mut visibility = query_sprite.single_mut();
     visibility.is_visible = true;
@@ -150,7 +153,6 @@ fn waiting_ui(
     time: Res<Time>,
     mut back_img_q: Query<(&mut Handle<Image>, &mut UiBackgroundImage)>,
     mut elements: Elements,
-    mut show_menu: ResMut<ShowMenu>,
     tile_size: Res<TileSize>,
     keys: Res<Input<KeyCode>>,
 ) {
@@ -163,34 +165,6 @@ fn waiting_ui(
         }
         let index = img_settings.index;
         *img.as_mut() = img_settings.frames[index].clone();
-    }
-
-    if keys.just_pressed(KeyCode::Space) && !show_menu.0 {
-        show_menu.0 = true;
-        let button_text_size = tile_size.0 / 2.5;
-        let connection_error_text_size = tile_size.0 / 3.5;
-        elements.select(".start-text").remove();
-        commands.add(eml! {
-            <body>
-                <div c:mm-center-box>
-                    <button c:mm-play-button id="play-button">
-                        <img src="button.png" mode="fit">
-                            <span s:font-size=button_text_size>"Play"</span>
-                        </img>
-                    </button>
-                    <button c:mm-settings-button id="settings-button">
-                        <img src="button.png" mode="fit">
-                            <span s:font-size=button_text_size>"Settings"</span>
-                        </img>
-                    </button>
-                    <label value="Could not connect to the server!"
-                        s:font-size=connection_error_text_size
-                        c:conn-err-text
-                        c:hidden>
-                    </label>
-                </div>
-            </body>
-        });
     }
 }
 
@@ -208,6 +182,7 @@ fn main_menu_buttons(
                     if play_btn_ent == &entity {
                         match net::init(&mut commands, &settings.server_addr) {
                             Ok(_) => {
+                                elements.select(".mm-center-box").remove();
                                 state.set(GameState::PreparingForGame).unwrap();
                             }
                             Err(e) => {

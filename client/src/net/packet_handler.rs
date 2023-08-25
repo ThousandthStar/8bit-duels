@@ -1,10 +1,14 @@
 use super::QueueIn;
 use crate::{
     animations::AttackAnimation,
+    card_interactions::{SelectIndicator, ViewingCardEntity},
     currency::{Pawns, Spirits},
     ownership_indicator::OwnershipIndicator,
     tilemap::{self, CardSprites, TileSize},
-    ui::{in_game_ui::TurnIndicator, GameFont},
+    ui::{
+        in_game_ui::{EndTurnButtonLabel, TurnIndicator},
+        GameFont,
+    },
     GameState, IsPlayer1, IsSelfTurn,
 };
 use belly::prelude::*;
@@ -36,15 +40,22 @@ fn handle_packets(
     card_sprites: Res<CardSprites>,
     tile_size: Res<TileSize>,
     mut card_entity_q: Query<(Entity, &mut CardEntity, &Transform)>,
-    mut visible_q: Query<&mut Visibility, (Without<CardEntity>, Without<Label>)>,
+    mut visible_q: Query<
+        &mut Visibility,
+        (
+            Without<CardEntity>,
+            Without<Label>,
+            Without<SelectIndicator>,
+        ),
+    >,
     mut is_self_turn: ResMut<IsSelfTurn>,
     mut is_player_1_res: ResMut<IsPlayer1>,
     mut pawn_count: ResMut<Pawns>,
     mut spirit_count: ResMut<Spirits>,
     mut turn_label_q: Query<&mut Label, (With<TurnIndicator>, Without<CardEntity>)>,
     game_font: Res<GameFont>,
-    mut elements: Elements,
     asset_server: Res<AssetServer>,
+    mut elements: Elements,
     mut messages: ResMut<ChatMessages>,
 ) {
     let mut guard = queue_in.0.lock().unwrap();
@@ -81,6 +92,8 @@ fn handle_packets(
                     .insert(card_entity)
                     .insert(tilemap::InstantMove)
                     .with_children(move |parent| {
+                        let mut transform = Transform::default();
+                        transform.translation.z = 400.0;
                         parent
                             .spawn(SpriteBundle {
                                 sprite: Sprite {
@@ -169,10 +182,14 @@ fn handle_packets(
                             s:width=format!("{}px", tile_size * 3.6)
                             s:height=format!("{}px", tile_size * 0.9)
                         >
-                            <img src=button_handle mode="fit">
-                                <span s:font-size=format!("{}", tile_size / 4.0)>
-                                    "End Turn"
-                                </span>
+                            <img src=button_handle mode="fit" id="end-turn-button-img">
+                                <label
+                                    with=EndTurnButtonLabel
+                                    s:font-size=format!("{}", tile_size / 4.0)
+                                    id="end-turn-button-span"
+                                    value="End Turn"
+                                >
+                                </label>
                             </img>
                         </button>
 
@@ -182,11 +199,19 @@ fn handle_packets(
             }
             ServerMessage::EndGame(_won) => {
                 for (entity, _, _) in card_entity_q.iter() {
-                    commands.entity(entity).despawn();
+                    commands.entity(entity).despawn_recursive();
                 }
                 for mut visibility in visible_q.iter_mut() {
                     visibility.is_visible = false;
                 }
+                commands.add(|world: &mut World| {
+                    world
+                        .query_filtered::<&mut Visibility, With<SelectIndicator>>()
+                        .single_mut(world)
+                        .is_visible = false;
+                    world.get_resource_mut::<ViewingCardEntity>().unwrap().0 = None;
+                });
+                elements.select("body").remove();
                 state.set(GameState::Waiting).unwrap();
             }
             ServerMessage::ChatMessage(message) => {

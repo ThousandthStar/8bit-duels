@@ -50,7 +50,7 @@ fn load_card_sprites(
 ) {
     let sprite_sheet = asset_server.load("sprite_sheet.png");
     let atlas: TextureAtlas =
-        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(32.0), 1, 4, None, None);
+        TextureAtlas::from_grid(sprite_sheet, Vec2::splat(32.0), 5, 1, None, None);
 
     let atlas_handle = texture_atlases.add(atlas);
     let mut card_sprite_map = HashMap::new();
@@ -58,6 +58,7 @@ fn load_card_sprites(
     card_sprite_map.insert("skeleton".to_string(), 1);
     card_sprite_map.insert("kraken".to_string(), 2);
     card_sprite_map.insert("spider".to_string(), 3);
+    card_sprite_map.insert("crow".to_string(), 4);
 
     commands.insert_resource(CardSprites(atlas_handle, card_sprite_map));
 }

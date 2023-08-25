@@ -1,3 +1,5 @@
+use crate::utils::uppercase_first_letter;
+
 use super::*;
 use common::card::{CardEntity, CardNameToSprite};
 
@@ -10,6 +12,7 @@ impl Plugin for InGameUiPlugin {
             .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_in_game_ui))
             .add_system_set(SystemSet::on_update(GameState::Playing).with_system(in_game_ui_left_panel))
             .add_system_set(SystemSet::on_update(GameState::Playing).with_system(update_currency_text))
+            .add_system_set(SystemSet::on_update(GameState::Playing).with_system(update_current_card_text))
             .add_system_set(SystemSet::on_update(GameState::Playing).with_system(chat_ui))
             .insert_resource(EditingMessage("".to_owned()));
     }
@@ -17,13 +20,10 @@ impl Plugin for InGameUiPlugin {
 
 #[derive(Component)]
 struct CurrentlyPlacingCard(Card);
-
 #[derive(Resource)]
 struct CurrentlyPlacing(bool);
-
 #[derive(Resource)]
 struct EditingMessage(String);
-
 #[derive(Component, Default)]
 struct ChatSendButton;
 #[derive(Component, Default)]
@@ -34,6 +34,18 @@ pub struct TurnIndicator;
 struct SpiritIndicator;
 #[derive(Component, Default)]
 struct PawnIndicator;
+#[derive(Component, Default)]
+struct CurrentCardLabel;
+#[derive(Component, Default)]
+struct CurrentCardDamageLabel;
+#[derive(Component, Default)]
+struct CurrentCardHealthLabel;
+#[derive(Component, Default)]
+struct CurrentCardStunnedLabel;
+#[derive(Component, Default)]
+struct CurrentCardAbilitiesLabel;
+#[derive(Component, Default)]
+pub struct EndTurnButtonLabel;
 
 #[derive(Clone, Resource, Debug)]
 struct UiCardElement{
@@ -48,7 +60,6 @@ struct UiCardElementList(Vec<UiCardElement>);
 
 fn spawn_in_game_ui(
     mut commands: Commands,
-    game_font: Res<GameFont>,
     tile_size: Res<TileSize>,
     asset_server: Res<AssetServer>,
     _card_sprites: Res<CardSprites>,
@@ -59,8 +70,10 @@ fn spawn_in_game_ui(
     let ui_card_bg_button: Handle<Image> = asset_server.load("ui_card_bg_button.png");
     let spirit_img_handle: Handle<Image> = asset_server.load("spirit.png");
     let pawn_img_handle: Handle<Image> = asset_server.load("pawn.png");
+    let button_handle: Handle<Image> = asset_server.load("button.png");
     let tile_size = tile_size.0;
     let text_size = tile_size / 4.5;
+    let current_card_text_size = tile_size / 4.0;
     let img_size = format!("{}px", tile_size / 2.0);
     let chat_send_height = format!("{}px", tile_size * 0.6875);
     let mut ui_card_button_elem_list: Vec<UiCardElement> = Vec::new();
@@ -74,10 +87,7 @@ fn spawn_in_game_ui(
 
         let card = deck.0.get(4 - i).unwrap().clone();
         let card_button_ent = commands.spawn_empty().id();
-        let temp = &card.get_name();
-        let mut chars: Vec<char> = temp.chars().collect();
-        chars[0] = chars[0].to_uppercase().nth(0).unwrap();
-        let name: String = chars.into_iter().collect();
+        let name: String = uppercase_first_letter(card.get_name());
         let troop_img: Handle<Image> = asset_server
             .load(format!(
                 "troop_{}.png",
@@ -164,8 +174,41 @@ fn spawn_in_game_ui(
                         </div>
                     </for>
                 </div>
+                /*
+                * Right Panel
+                */ 
                 <div id="right-panel">
                     <div id="card-viewing-div">
+                        <label 
+                            id="current-card-label"
+                            with=CurrentCardLabel
+                            s:font-size=current_card_text_size
+                            value="Current Card: None">
+                        </label>
+                        <label
+                            with=CurrentCardDamageLabel
+                            value="Damage: "
+                            s:font-size=text_size.clone()
+                            id="current-card-damage">
+                        </label>
+                        <label
+                            value="Health: "
+                            with=CurrentCardHealthLabel
+                            s:font-size=text_size.clone()
+                            id="current-card-hp">
+                        </label>
+                        <label
+                            value="Stunned: "
+                            s:font-size=text_size.clone()
+                            with=CurrentCardStunnedLabel
+                            id="current-card-stunned">
+                        </label>
+                         <label
+                            value="Abilities: "
+                            s:font-size=text_size.clone()
+                            with=CurrentCardAbilitiesLabel
+                            id="current-card-abilities">
+                        </label>  
                     </div>
                     <div id="chat-div">
                         <label 
@@ -178,7 +221,7 @@ fn spawn_in_game_ui(
                                 <label
                                     s:color="black"
                                     value=""
-                                    s:font-size=format!("{}", tile_size / 4.0)
+                                    s:font-size=format!("{}", tile_size / 4.5)
                                     s:top="0px"
                                     s:width="90%"
                                     s:left="0%"
@@ -254,11 +297,57 @@ fn chat_ui(
     }
 }
 
+fn update_current_card_text(
+    mut name: Query<&mut Label, With<CurrentCardLabel>>,
+    mut damage: Query<&mut Label, (With<CurrentCardDamageLabel>, Without<CurrentCardLabel>)>,
+    mut hp: Query<
+        &mut Label, 
+        (
+            With<CurrentCardHealthLabel>, 
+            Without<CurrentCardLabel>, 
+            Without<CurrentCardDamageLabel>
+        )
+    >,
+    mut stunned: Query<
+        &mut Label, 
+        (
+            With<CurrentCardStunnedLabel>, 
+            Without<CurrentCardHealthLabel>, 
+            Without<CurrentCardDamageLabel>, 
+            Without<CurrentCardLabel>
+        )
+    >,
+    mut abilities: Query<
+        &mut Label,
+        (
+            With<CurrentCardAbilitiesLabel>,
+            Without<CurrentCardStunnedLabel>,
+            Without<CurrentCardHealthLabel>,
+            Without<CurrentCardDamageLabel>,
+            Without<CurrentCardLabel>,
+        )
+    >,
+    current_card: Res<ViewingCardEntity>,
+){
+    if let Some(card_entity) = &current_card.0{
+        let card_name = uppercase_first_letter(card_entity.get_card().get_name());
+        name.single_mut().value = format!("Current Card: {}", card_name);
+        damage.single_mut().value = format!("Damage: {}", card_entity.get_card().get_damage());
+        hp.single_mut().value = format!("Health: {}", card_entity.current_hp);
+        stunned.single_mut().value = if card_entity.stun_count > 0 {
+            "Stunned: Yes".to_string()
+        }else{
+            "Stunned: No".to_string()
+        };
+        let card_abilities = card_entity.get_card().get_abilities();
+        let mut stringified = "Abilities: ".to_string();
+        card_abilities.iter().for_each(|x| stringified.push_str(&x.to_string()));
+        abilities.single_mut().value = stringified;
+    } 
+}
+
 fn in_game_ui_left_panel(
-    /*
-    mut context: ResMut<EguiContext>,
     selected_card: Res<ViewingCardEntity>,
-    */
     queue_out: ResMut<QueueOut>,
     mut is_self_turn: ResMut<IsSelfTurn>,
     deck: Res<Deck>,
@@ -279,21 +368,40 @@ fn in_game_ui_left_panel(
         if let BtnEvent::Pressed(entity) = event{
             if let Some(button_ent) = elements.select("#end-turn-button").entities().get(0) {
                 if button_ent == entity{
-                    queue_out
-                        .0
-                        .lock()
-                        .unwrap()
-                        .push_back(ClientMessage::EndTurn);
-                    is_self_turn.0 = false;
-                    for mut card_entity in card_entity_q.iter_mut() {
-                        if card_entity.is_owned_by_p1() != is_player_1.0 {
-                            card_entity.reset();
+                    if elements.select(".win").entities().len() == 0{
+                        queue_out
+                            .0
+                            .lock()
+                            .unwrap()
+                            .push_back(ClientMessage::EndTurn);
+                        is_self_turn.0 = false;
+                        for mut card_entity in card_entity_q.iter_mut() {
+                            if card_entity.is_owned_by_p1() != is_player_1.0 {
+                                card_entity.reset();
+                            }
                         }
+                        elements.select("#end-turn-button").remove();
+                        commands.add(|world: &mut World|{
+                            world.query_filtered::<&mut Label, With<TurnIndicator>>().single_mut(world).value = "Opponent's Turn".to_string();
+                        });
                     }
-                    elements.select("#end-turn-button").remove();
-                    commands.add(|world: &mut World|{
-                        world.query_filtered::<&mut Label, With<TurnIndicator>>().single_mut(world).value = "Opponent's Turn".to_string();
-                    });
+                    else if let Some(card_entity) = &selected_card.0{
+                        let y = if is_player_1.0 {
+                            card_entity.get_y_pos()
+                        } else {
+                            8 - card_entity.get_y_pos()
+                        };
+                        let x = if is_player_1.0 {
+                            card_entity.get_x_pos()
+                        } else {
+                            4 - card_entity.get_x_pos()
+                        };
+                        queue_out
+                            .0
+                            .lock()
+                            .unwrap()
+                            .push_back(ClientMessage::WinGame(x, y));
+                    }
                 }
             
                 else {
@@ -332,56 +440,24 @@ fn in_game_ui_left_panel(
             }
         } 
     }
-    /*
-    egui::SidePanel::left("in_game_ui")
-        .min_width(tile_size.0 * 4.75)
-        .max_width(tile_size.0 * 4.75)
-        .show(context.ctx_mut(), |ui| {
-            if is_self_turn.0 {
-                ui.label("Your turn!");
-                ui.label("Opponent's turn!");
-            }
-            ui.add_space(10.0);
-            /*
-            if let Some(card_entity) = selected_card.0.clone() {
-                if card_entity.is_owned_by_p1() == is_player_1.0 {
-                    ui.monospace("Your troop");
-                } else {
-                    ui.monospace("Your opponent's troop");
-                }
-                ui.monospace(format!("Current card: {}", card_entity.get_card().name));
-                ui.monospace(format!("Attack: {}", card_entity.get_card().get_damage()));
-                ui.monospace(format!("HP: {}", card_entity.current_hp));
-                if card_entity.stun_count > 0 {
-                    ui.monospace("Stunned");
-                }
-                if card_entity.get_y_pos() == 0 {
-                    if !card_entity.has_moved()
-                        && card_entity.is_owned_by_p1() == is_player_1.0
-                        && is_self_turn.0
-                        && !(card_entity.stun_count > 0)
-                    {
-                        if ui.button("Win").clicked() {
-                            let y = if is_player_1.0 {
-                                card_entity.get_y_pos()
-                            } else {
-                                8 - card_entity.get_y_pos()
-                            };
-                            let x = if is_player_1.0 {
-                                card_entity.get_x_pos()
-                            } else {
-                                4 - card_entity.get_x_pos()
-                            };
-                            queue_out
-                                .0
-                                .lock()
-                                .unwrap()
-                                .push_back(ClientMessage::WinGame(x, y));
-                        }
+    if let Some(card_entity) = selected_card.0.clone() {
+        if card_entity.get_y_pos() == 0 {
+            if !card_entity.has_moved()
+                && card_entity.is_owned_by_p1() == is_player_1.0
+                && is_self_turn.0
+                && !(card_entity.stun_count > 0)
+            {
+                elements.select("#end-turn-button").add_class("win");
+                commands.add(|world: &mut World|{
+                    let mut query = world.query_filtered::<&mut Label, With<EndTurnButtonLabel>>();
+                    if let Ok(mut label) = query.get_single_mut(world){
+                        label.value = "Win Game".to_string();
                     }
-                }
+                });
             }
-                */
+        }
+    }
+            /*
             ui.add_space(10.0);
             ui.monospace(format!("Pawns: {}", pawn_count.0));
             ui.monospace(format!("Spirits: {}", spirit_count.0));
