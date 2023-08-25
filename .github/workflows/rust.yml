@@ -1,22 +1,27 @@
-name: Rust
-
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
+  release:
+    types: [created]
 
 jobs:
-  build:
-
+  release:
+    name: release ${{ matrix.target }}
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-gnu
+            archive: zip
+          - target: x86_64-unknown-linux-musl
+            archive: tar.gz tar.xz tar.zst
+          - target: x86_64-apple-darwin
+            archive: zip
     steps:
-    - uses: actions/checkout@v3
-    - run: sudo apt-get install -y libasound2-dev
-    - run: sudo apt-get install -y libudev-dev
-    - name: Build
-      run: cd client; cargo build --verbose
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.4.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          ARCHIVE_TYPES: ${{ matrix.archive }}

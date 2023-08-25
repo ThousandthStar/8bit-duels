@@ -1,18 +1,19 @@
 ## 8-bit duels
-A turn-based multiplayer strategy game written in Rust with the Bevy game engine. WIP
+[8bit Duels image](logo.png)
 
-[devlog](https://dev.to/thousandthstar/start-of-the-game-development-blog-series-p42)
+A turn-based multiplayer strategy game written in Rust with the Bevy game engine.
+I made a series of devlogs showcasing my gradual progress: check it out [here](https://thousandthstar.github.io/)
 
-#### How to run:
+#### How to Play 8bit Duels:
 
-* Download the source code
-* Go to server and run it (needs root permission to set up TCP connection)
-* Run two clients with `-- dev` to not crash on startup
+* Go to the release tab
+* Download the binary for your operating system (Windows, Mac or Linux)
+* Download the `assets` folder
+* Extract the archive (`zip` or `tar` file) and put it in the same folder as the `assets` folder
+* Run the executable extracted from the archive
+* In the game, go to the settings and se the server address to `172.105.19.35:1000`
 
 #### Licenses: 
 
-The project is licensed under the MIT Licence, except for these files, found in the `client/assets` folder:
-
-* `Monocraft.otf`
-* `Monocraft.kayak_font`
-* `Monocraft.png`
+The project is licensed under the MIT Licence, except for the file `Monocraft.otf`, found in the `client/assets` folder.
+It is licensed under the terms contained in the `FONT_LICENSE` file.

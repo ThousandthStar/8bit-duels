@@ -30,10 +30,10 @@ impl CardCollection {
                 CardType::Troop,
                 12.,
                 1.,
-                5,
+                6,
                 vec![CardAbility::MultiAttack {
-                    max_attacks: 2_u8,
-                    attack_count: 0_u8,
+                    max_attacks: 2,
+                    attack_count: 0,
                 }],
             ),
         );
@@ -46,6 +46,20 @@ impl CardCollection {
                 2.,
                 4,
                 vec![CardAbility::Stun { amount: 2 }],
+            ),
+        );
+        map.insert(
+            "crow".to_string(),
+            Card::new(
+                "crow",
+                CardType::Troop,
+                2.,
+                2.,
+                3,
+                vec![CardAbility::MultiAttack {
+                    max_attacks: 1,
+                    attack_count: 0,
+                }],
             ),
         );
         CardCollection(map)
@@ -228,19 +242,29 @@ pub enum CardAbility {
     Stun { amount: i32 },
 }
 
+impl ToString for CardAbility {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::MultiAttack { max_attacks, .. } => {
+                format!("Multi-Attack {}", max_attacks + 1).to_string()
+            }
+            Self::Stun { .. } => "Stun".to_string(),
+            Self::SpiritCollector => "Spirit Collector".to_string(),
+        }
+    }
+}
 
 #[derive(Resource)]
 pub struct CardNameToSprite(pub HashMap<String, u8>);
 
-impl Default for CardNameToSprite{
+impl Default for CardNameToSprite {
     fn default() -> CardNameToSprite {
         let mut map: HashMap<String, u8> = HashMap::new();
         map.insert("reaper".to_string(), 0);
         map.insert("skeleton".to_string(), 1);
         map.insert("kraken".to_string(), 2);
         map.insert("spider".to_string(), 3);
-        CardNameToSprite (
-           map 
-        )
+        map.insert("crow".to_string(), 4);
+        CardNameToSprite(map)
     }
 }

@@ -29,4 +29,5 @@ pub enum ClientMessage {
     EndTurn,
     WinGame(i32, i32),
     ChatMessage(String),
+    Resign,
 }
