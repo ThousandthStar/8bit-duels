@@ -10,6 +10,7 @@ impl Plugin for OpeningPlugin {
         app.add_system_set(SystemSet::on_enter(GameState::Opening).with_system(spawn_opening))
             .add_system_set(SystemSet::on_update(GameState::Opening).with_system(opening))
             .add_system_set(SystemSet::on_exit(GameState::Opening).with_system(exit_opening))
+            .add_state(GameState::Opening)
             .insert_resource(OpeningTimer {
                 timer: Timer::new(Duration::from_millis(1500), TimerMode::Once),
                 going_up: true,

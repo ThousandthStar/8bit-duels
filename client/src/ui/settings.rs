@@ -1,4 +1,5 @@
 use bevy::log::{error, info};
+use bevy_pkv::PkvStore;
 use std::{error::Error, fs, path::Path};
 
 use crate::DevMode;
@@ -11,44 +12,25 @@ pub struct SettingsUiPlugin;
 
 impl Plugin for SettingsUiPlugin {
     fn build(&self, app: &mut App) {
-        let mut settings: Settings = Settings::default();
-        match load_settings_from_file() {
-            Ok(loaded_settings) => {
-                settings = loaded_settings;
-            }
-            Err(e) => {
-                error!("Critical error loading config: {}", e);
-                info!("Trying to write default settings to file");
-                match write_settings_to_file(&Settings::default()) {
-                    Ok(_) => {
-                        info!("Successfully wrote default settings to config file");
-                    }
-                    Err(e) => {
-                        error!("Failed to write: {}", e);
-                    }
-                }
-            }
-        }
+        static POST_PRE_STARTUP: &str = "post_pre_startup";
         app.add_system_set(
             SystemSet::on_update(GameState::Settings)
                 .with_system(settings_ui)
                 .after(setup_settings_ui),
         )
+        .add_startup_system_to_stage(
+            StartupStage::Startup,
+            load_settings_from_file.before(update_window_scale),
+        )
+        .insert_resource(PkvStore::new("ThousandthStarGames", "8bitDuels"))
         .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(build_ui))
         .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(destroy_ui))
         .add_system_set(SystemSet::on_exit(GameState::Settings).with_system(remove_bg_image))
         .add_system_set(SystemSet::on_enter(GameState::Settings).with_system(setup_settings_ui))
-        .add_startup_system_to_stage(StartupStage::Startup, update_window_scale)
-        .insert_resource(DevMode(settings.debug_mode))
-        .add_state(if settings.debug_mode {
-            GameState::Waiting
-        } else {
-            GameState::Opening
-        });
-        if settings.debug_mode {
-            app.add_plugin(WorldInspectorPlugin);
-        }
-        app.insert_resource(settings);
+        .add_startup_system_to_stage(
+            StartupStage::Startup,
+            update_window_scale.after(load_settings_from_file),
+        );
     }
 }
 
@@ -81,16 +63,18 @@ impl Default for Settings {
     }
 }
 
-fn load_settings_from_file() -> Result<Settings, Box<dyn Error>> {
-    let raw_config = fs::read_to_string(Path::new("assets").join("config.ron"))?;
-    let settings: Settings = ron::from_str(&raw_config)?;
-    Ok(settings)
-}
-
-fn write_settings_to_file(settings: &Settings) -> Result<(), Box<dyn Error>> {
-    let stringed = ron::to_string(settings)?;
-    fs::write(Path::new("assets").join("config.ron"), stringed.as_str())?;
-    Ok(())
+fn load_settings_from_file(world: &mut World) {
+    let mut pkv = world.get_resource_mut::<PkvStore>().unwrap();
+    let mut settings = Settings::default();
+    if let Ok(loaded_settings) = pkv.get::<Settings>("settings") {
+        settings = loaded_settings;
+    } else {
+        let settings = Settings::default();
+        pkv.set("settings", &settings)
+            .expect("failed to store settings!");
+    }
+    world.insert_resource(DevMode(settings.debug_mode));
+    world.insert_resource(settings);
 }
 
 pub fn update_window_scale(mut windows: ResMut<Windows>, settings: Res<Settings>) {
@@ -265,6 +249,7 @@ fn settings_ui(
     mut state: ResMut<State<GameState>>,
     mut elements: Elements,
     mut reader: EventReader<BtnEvent>,
+    mut pkv: ResMut<PkvStore>,
     username_input_q: Query<&TextInput, (With<UsernameTextBox>, Without<ServerAddressTextBox>)>,
     server_addr_input_q: Query<&TextInput, (With<ServerAddressTextBox>, Without<UsernameTextBox>)>,
     switch_input_q: Query<&Switch, (Without<ServerAddressTextBox>, Without<UsernameTextBox>)>,
@@ -284,7 +269,7 @@ fn settings_ui(
                         .value
                         .trim()
                         .replace(|c: char| !c.is_ascii() || c.is_whitespace(), "");
-                    match write_settings_to_file(&settings) {
+                    match pkv.set("settings", &settings.clone()) {
                         Ok(_) => {
                             elements.select("#successful-save").remove_class("hidden");
                             elements.select("#fail-save").add_class("hidden");

@@ -20,6 +20,7 @@ pub struct TilemapPlugin;
 
 impl Plugin for TilemapPlugin {
     fn build(&self, app: &mut App) {
+        static TILE_SIZE_STAGE: &str = "tile_size_stage";
         app.add_system_set(
             SystemSet::on_enter(GameState::PreparingForGame).with_system(spawn_tiles),
         )
