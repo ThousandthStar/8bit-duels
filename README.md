@@ -1,6 +1,8 @@
 ## 8-bit duels
 ![8bit Duels image](logo.png)
 
+## [RELEASE VIDEO](https://www.youtube.com/watch?v=maKARl89Qos)
+
 A turn-based multiplayer strategy game written in Rust with the Bevy game engine.
 I made a series of devlogs showcasing my gradual progress: check it out [here](https://thousandthstar.github.io/)
 
